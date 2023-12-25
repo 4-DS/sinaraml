@@ -1,0 +1,56 @@
+[build-system]
+requires = ['hatchling', "hatch-vcs>=0.3.0"]
+build-backend = 'hatchling.build'
+
+[project]
+name = "sinaraml"
+authors = [
+    {name = "sinaraml", email = "sinaraml.official@gmail.com"},
+]
+description = "SinaraML"
+readme = "README.md"
+requires-python = ">=3.6"
+keywords = ["cli", "sinaraml"]
+license = { file="LICENSE" }
+classifiers = [
+        "License :: OSI Approved :: Apache Software License",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: Implementation :: CPython",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence"
+]
+dependencies = [
+    'importlib-metadata; python_version>="3.6"'
+]
+dynamic = ["version"]
+
+[project.urls]
+"Homepage" = "https://github.com/4-DS/sinaraml"
+
+[project.scripts]
+sinara = "sinaraml.sinaraml:main"
+
+[tool.hatch.version]
+source = "vcs"
+fallback-version = "0.0.0"
+[tool.hatch.build.hooks.vcs]
+version-file = "sinaraml_cli/_version.py"
+[tool.hatch.version.raw-options]
+git_describe_command = [
+    "git",
+    "describe",
+    "--dirty",
+    "--tags",
+    "--long",
+    "--first-parent",
+]
+version_scheme = "post-release"
+fallback_version = "0.0.0"
+[tool.hatch.metadata]
+allow-direct-references = true
+[tool.hatch.build.targets.sdist]
+only-include = ["sinaraml"]
+[tool.hatch.build.targets.wheel]
+packages = ["sinaraml"]
