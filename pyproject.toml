@@ -22,6 +22,7 @@ classifiers = [
         "Topic :: Scientific/Engineering :: Artificial Intelligence"
 ]
 dependencies = [
+    "docker>=4.3.1",
     'importlib-metadata; python_version>="3.6"'
 ]
 dynamic = ["version"]
@@ -35,8 +36,13 @@ sinara = "sinaraml.sinaraml:main"
 [tool.hatch.version]
 source = "vcs"
 fallback-version = "0.0.0"
+
+[tool.hatch.build]
+dev-mode-dirs = ["."]
+
 [tool.hatch.build.hooks.vcs]
-version-file = "sinaraml_cli/_version.py"
+version-file = "sinaraml/_version.py"
+
 [tool.hatch.version.raw-options]
 git_describe_command = [
     "git",
@@ -48,9 +54,12 @@ git_describe_command = [
 ]
 version_scheme = "post-release"
 fallback_version = "0.0.0"
+
 [tool.hatch.metadata]
 allow-direct-references = true
+
 [tool.hatch.build.targets.sdist]
 only-include = ["sinaraml"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["sinaraml"]
