@@ -5,14 +5,22 @@ import logging
 from .server import SinaraServer
 from .model import SinaraModel
 
-def init_cli(root_parser):
-    SinaraServer.add_command_handlers(root_parser)
-    SinaraModel.add_command_handlers(root_parser)
+def init_cli(root_parser, subject_parser):
+    SinaraServer.add_command_handlers(root_parser, subject_parser)
+    SinaraModel.add_command_handlers(subject_parser)
 
 def setup_logging(use_vebose=False):
     logging.basicConfig(format="%(levelname)s: %(message)s")
     if use_vebose:
         logging.getLogger().setLevel(logging.DEBUG)
+
+def get_cli_version():
+    try:
+        from ._version import __version__
+        return __version__
+    except Exception as e:
+        logging.info(e)
+    return 'unknown'
 
 def main():
 
@@ -20,14 +28,15 @@ def main():
 
     # add root parser and root subcommand parser (subject)
     parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers(title='subject', dest='subject', help=f"subject to use")
+    subject_subparser = parser.add_subparsers(title='subject', dest='subject', help=f"subject to use")
     parser.add_argument('-v', '--verbose', action='store_true', help="display verbose logs")
+    parser.add_argument('--version', action='version', version=f"SinaraML CLI {get_cli_version()}")
 
     # each cli plugin adds and manages subcommand handlers (starting from subject handler) to root parser
-    init_cli(subparsers)
+    init_cli(parser, subject_subparser)
 
     # parse the command line and get all arguments
-    args = parser.parse_args()
+    args = parser.parse_known_args()[0]
 
     # Setup logs format and verbosity level
     setup_logging(args.verbose)
@@ -50,7 +59,10 @@ def main():
             args.func(args)
             exit_code = 0
         except Exception as e:
-            logging.exception(e)
+            if args.verbose:
+                logging.exception(e)
+            else:
+                logging.error(e)
     
     return exit_code
 

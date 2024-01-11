@@ -4,6 +4,7 @@ import socket
 import re
 import urllib
 import time
+import argparse
 from .docker_utils import ensure_docker_volume, \
                           docker_volume_remove, \
                           docker_container_create, \
@@ -15,18 +16,27 @@ from .docker_utils import ensure_docker_volume, \
                           docker_pull_image, \
                           docker_get_port_on_host, \
                           docker_get_container_labels
-from .common_utils import get_public_ip
+from .common_utils import get_public_ip, get_expanded_path
 from .platform import SinaraPlatform
+from .infra import SinaraInfra
+from .plugin_loader import SinaraPluginLoader
 
 class SinaraServer():
 
     subject = 'server'
     container_name = 'jovyan-single-use'
     sinara_images = ['buslovaev/sinara-notebook', 'buslovaev/sinara-cv']
+    root_parser = None
+    subject_parser = None
+    create_parser = None
+    start_parser = None
+    remove_parser = None
 
     @staticmethod
-    def add_command_handlers(root_parser):
-        parser_server = root_parser.add_parser(SinaraServer.subject, help='sinara server subject')
+    def add_command_handlers(root_parser, subject_parser):
+        SinaraServer.root_parser = root_parser
+        SinaraServer.subject_parser = subject_parser
+        parser_server = subject_parser.add_parser(SinaraServer.subject, help='sinara server subject')
         server_subparsers = parser_server.add_subparsers(title='action', dest='action', help='Action to do with subject')
 
         SinaraServer.add_create_handler(server_subparsers)
@@ -36,23 +46,23 @@ class SinaraServer():
         SinaraServer.add_update_handler(server_subparsers)
 
     @staticmethod
-    def add_create_handler(root_parser):
-        server_create_parser = root_parser.add_parser('create', help='create sinara server')
-        server_create_parser.add_argument('--instanceName', default=SinaraServer.container_name, type=str, help='sinara server container name (default: %(default)s)')
-        server_create_parser.add_argument('--runMode', default='q', choices=["q", "b"], help='Runmode, quick (q) - work, data, tmp will be mounted inside docker volumes, basic (b) - work, data, tmp will be mounted from host folders (default: %(default)s)')
-        server_create_parser.add_argument('--createFolders', default='y', choices=["y", "n"], help='y - create work, data, tmp folders in basic mode automatically, n - folders must be created manually (default: %(default)s)')
-        server_create_parser.add_argument('--gpuEnabled', choices=["y", "n"], help='y - Enables docker container to use Nvidia GPU, n - disable GPU')
-        server_create_parser.add_argument('--memRequest', default='4g', type=str, help='Amount of memory requested for server container (default: %(default)s)')
-        server_create_parser.add_argument('--memLimit', default='8g', type=str, help='Maximum amount of memory for server container (default: %(default)s)')
-        server_create_parser.add_argument('--cpuLimit', default='4', type=int, help='Number of CPU cores to use for server container (default: %(default)s)')
-        server_create_parser.add_argument('--jovyanRootPath', type=str, help='Path to parent folder for data, work and tmp (only used in basic mode with createFolders=y)')
-        server_create_parser.add_argument('--jovyanDataPath', type=str, help='Path to data fodler on host (only used in basic mode)')
-        server_create_parser.add_argument('--jovyanWorkPath', type=str, help='Path to work folder on host (only used in basic mode)')
-        server_create_parser.add_argument('--jovyanTmpPath', type=str, help='Path to tmp folder on host (only used in basic mode)')
-        server_create_parser.add_argument('--infraName', default='local_filesystem', type=str, help='Infrastructure name to use (default: %(default)s)')
-        server_create_parser.add_argument('--insecure', action='store_true', help='Run server without password protection')
-        server_create_parser.add_argument('--platform', default=SinaraPlatform.Desktop, choices=list(SinaraPlatform), type=SinaraPlatform, help='Server platform - host where the server is run')
-        server_create_parser.set_defaults(func=SinaraServer.create)
+    def add_create_handler(server_cmd_parser):
+        SinaraServer.create_parser = server_cmd_parser.add_parser('create', help='create sinara server')
+        SinaraServer.create_parser.add_argument('--instanceName', default=SinaraServer.container_name, type=str, help='sinara server container name (default: %(default)s)')
+        SinaraServer.create_parser.add_argument('--runMode', default='q', choices=["q", "b"], help='Runmode, quick (q) - work, data, tmp will be mounted inside docker volumes, basic (b) - work, data, tmp will be mounted from host folders (default: %(default)s)')
+        SinaraServer.create_parser.add_argument('--createFolders', default='y', choices=["y", "n"], help='y - create work, data, tmp folders in basic mode automatically, n - folders must be created manually (default: %(default)s)')
+        SinaraServer.create_parser.add_argument('--gpuEnabled', choices=["y", "n"], help='y - Enables docker container to use Nvidia GPU, n - disable GPU')
+        SinaraServer.create_parser.add_argument('--memRequest', default='4g', type=str, help='Amount of memory requested for server container (default: %(default)s)')
+        SinaraServer.create_parser.add_argument('--memLimit', default='8g', type=str, help='Maximum amount of memory for server container (default: %(default)s)')
+        SinaraServer.create_parser.add_argument('--cpuLimit', default='4', type=int, help='Number of CPU cores to use for server container (default: %(default)s)')
+        SinaraServer.create_parser.add_argument('--jovyanRootPath', type=str, help='Path to parent folder for data, work and tmp (only used in basic mode with createFolders=y)')
+        SinaraServer.create_parser.add_argument('--jovyanDataPath', type=str, help='Path to data fodler on host (only used in basic mode)')
+        SinaraServer.create_parser.add_argument('--jovyanWorkPath', type=str, help='Path to work folder on host (only used in basic mode)')
+        SinaraServer.create_parser.add_argument('--jovyanTmpPath', type=str, help='Path to tmp folder on host (only used in basic mode)')
+        SinaraServer.create_parser.add_argument('--infraName', default=SinaraInfra.LocalFileSystem, choices=SinaraServer.get_available_infra_names(), type=str, help='Infrastructure name to use (default: %(default)s)')
+        SinaraServer.create_parser.add_argument('--insecure', action='store_true', help='Run server without password protection')
+        SinaraServer.create_parser.add_argument('--platform', default=SinaraPlatform.Desktop, choices=list(SinaraPlatform), type=SinaraPlatform, help='Server platform - host where the server is run')
+        SinaraServer.create_parser.set_defaults(func=SinaraServer.create)
 
     @staticmethod
     def add_start_handler(root_parser):
@@ -121,10 +131,48 @@ class SinaraServer():
         jupyter_ui_ports = SinaraServer.get_jupyter_ui_ports_mapping()
         result = {**spark_ui_ports, **jupyter_ui_ports}
         return result
-        
+    
+    @staticmethod
+    def get_available_infra_names():
+        infras = SinaraServer.get_available_infras()
+        return infras.keys()
+
+    @staticmethod
+    def get_available_infras():
+        infras = {}
+        for _infra in SinaraInfra:
+            infras[_infra.value] = ["self"]
+        infra_plugins = SinaraPluginLoader.get_infra_plugins()
+        for plugin in infra_plugins:
+            plugin_infras = SinaraPluginLoader.get_infras(plugin)
+            for infra in plugin_infras:
+                if infra in infras and isinstance(infras[infra], list):
+                    infras[infra].append(plugin)
+                else:
+                    infras[infra] = [plugin]
+        return infras
+
     @staticmethod
     def create(args):
+        infras = SinaraServer.get_available_infras()
+        current_infra = str(args.infraName)
+        
+        if current_infra not in infras.keys():
+            raise Exception(f'Infra "{current_infra}" is not supported, available: {", ".join(infras.keys())}')
+
+        current_plugin = infras[current_infra][-1]
+        if current_plugin == "self":
+            SinaraServer._create(args)
+        else:
+            infra_plugin = SinaraPluginLoader.get_infra_plugin(current_plugin)
+            infra_plugin.add_create_arguments(SinaraServer.create_parser)
+            extended_args = SinaraServer.root_parser.parse_args()
+            infra_plugin.create_server(extended_args)
+        
+    @staticmethod
+    def _create(args):
         args_dict = vars(args)
+
         gpu_requests = []
         sinara_image_num = 1
 
@@ -199,7 +247,7 @@ class SinaraServer():
     def _prepare_basic_mode(args):
         if args.createFolders == "y":
             if not args.jovyanRootPath:
-                jovyan_root_path = input('Please, choose jovyan Root folder path (data, work and tmp will be created there): ')
+                jovyan_root_path = ( input('Please, choose jovyan Root folder path (data, work and tmp will be created there): ') )
             
             jovyan_data_path = os.path.join(jovyan_root_path, "data")
             jovyan_work_path = os.path.join(jovyan_root_path, "work")
@@ -211,11 +259,11 @@ class SinaraServer():
             os.makedirs(jovyan_tmp_path, exist_ok=True)
         else:
             if not args.jovyanDataPath:
-                jovyan_data_path = input("Please, choose jovyan Data path: ")
+                jovyan_data_path = get_expanded_path( input("Please, choose jovyan Data path: ") )
             if not args.jovyanWorkPath:
-                jovyan_work_path = input("Please, choose jovyan Work path: ")
+                jovyan_work_path = get_expanded_path( input("Please, choose jovyan Work path: ") )
             if not args.jovyanTmpPath:
-                jovyan_tmp_path = input("Please, choose jovyan Tmp path: ")
+                jovyan_tmp_path = get_expanded_path( input("Please, choose jovyan Tmp path: ") )
 
         folders_exist = ''
         while folders_exist not in ["y", "n"]:

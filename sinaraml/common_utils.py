@@ -3,6 +3,7 @@ import re
 import urllib
 import time
 import socket
+import os
 
 def compute_md5(file_name):
     hash_md5 = hashlib.md5()
@@ -62,4 +63,12 @@ def get_public_ip():
                 if ip_address_is_valid(public_ip):
                     result = public_ip
             break
+    return result
+
+def get_expanded_path(dest_path):
+    dest_path = str(dest_path).lstrip()
+    if dest_path[0] == '~':
+        result = os.path.expanduser(dest_path)
+    else:
+        result = os.path.abspath(dest_path)
     return result

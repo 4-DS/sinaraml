@@ -13,7 +13,7 @@ from .docker_utils import docker_container_create, \
                           docker_copy_from_container, \
                           docker_build_image
 
-from .common_utils import compute_md5
+from .common_utils import compute_md5, get_expanded_path
 
 class SinaraModel():
 
@@ -88,7 +88,7 @@ class SinaraModel():
         args_dict = vars(args)
         if not args.bentoservicePath:
             while not args.bentoservicePath:
-                args_dict['bentoservicePath'] = input("Please, enter ENTITY_PATH for your bentoservice: ")
+                args_dict['bentoservicePath'] = get_expanded_path( input("Please, enter ENTITY_PATH for your bentoservice: ") )
 
         model_image_tag = get_run_id_from_path(args.bentoservicePath)
 
@@ -162,11 +162,12 @@ class SinaraModel():
 
         if not args.modelImage:
             while not args.modelImage:
-                args_dict['modelImage'] = input("Please, input model image name: ")
+                args_dict['modelImage'] = input("Please, input model image name with tag: ")
 
         if not args.extractTo:
             while not args.extractTo:
-                args_dict['extractTo'] = input("Please, input path where to extract artifacts: ")
+                args_dict['extractTo'] = get_expanded_path( input("Please, input path to folder where to extract artifacts: ") )
+
         Path(args.extractTo).mkdir(parents=True, exist_ok=True)
 
         docker_container_remove(SinaraModel.model_container_name)
