@@ -72,3 +72,12 @@ def get_expanded_path(dest_path):
     else:
         result = os.path.abspath(dest_path)
     return result
+
+def str_to_bool(value):
+    value = value.lower()
+    if value in ('y', 'yes', 't', 'true', 'on', '1'):
+        return True
+    elif value in ('n', 'no', 'f', 'false', 'off', '0'):
+        return False
+    else:
+        raise ValueError("invalid truth value %r" % (value,))
