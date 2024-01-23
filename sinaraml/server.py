@@ -62,7 +62,7 @@ class SinaraServer():
         SinaraServer.create_parser.add_argument('--infraName', default=SinaraInfra.LocalFileSystem, choices=SinaraServer.get_available_infra_names(), type=str, help='Infrastructure name to use (default: %(default)s)')
         SinaraServer.create_parser.add_argument('--insecure', action='store_true', help='Run server without password protection')
         SinaraServer.create_parser.add_argument('--platform', default=SinaraPlatform.Desktop, choices=list(SinaraPlatform), type=SinaraPlatform, help='Server platform - host where the server is run')
-        SinaraServer.create_parser.add_argument('--experimental', type=str, choices=["y", "n"], help='Use expermiental server images')
+        SinaraServer.create_parser.add_argument('--experimental', action='store_true', help='Use expermiental server images')
         SinaraServer.create_parser.add_argument('--image', type=str, help='Custom server image name')
         SinaraServer.create_parser.set_defaults(func=SinaraServer.create)
 
@@ -89,7 +89,7 @@ class SinaraServer():
     def add_update_handler(root_parser):
         server_remove_parser = root_parser.add_parser('update', help='update docker image of a sinara server')
         server_remove_parser.add_argument('--image', choices=["ml", "cv"], help='ml - update ml image, cv - update CV image')
-        server_remove_parser.add_argument('--experimental', type=str, choices=["y", "n"], help='Update expermiental server images')
+        server_remove_parser.add_argument('--experimental', action='store_true', help='Update expermiental server images')
         server_remove_parser.set_defaults(func=SinaraServer.update)
 
     @staticmethod
@@ -198,15 +198,7 @@ class SinaraServer():
             gpu_requests = [ types.DeviceRequest(count=-1, capabilities=[['gpu']]) ]
 
         if not args.image:
-            if args.experimental is None:
-                sinara_image_exp = ""
-                while sinara_image_exp not in ["y", "n"]:
-                    try:
-                        sinara_image_exp = input('Use experimental server, y/n: ')
-                    except ValueError:
-                        pass
-                args_dict['experimental'] = sinara_image_exp
-            sinara_image = SinaraServer.sinara_images[ str_to_bool(args.experimental) ][ int(sinara_image_num - 1) ]
+            sinara_image = SinaraServer.sinara_images[ int(args.experimental) ][ int(sinara_image_num - 1) ]
         else:
             sinara_image = args.image
 
@@ -440,15 +432,6 @@ class SinaraServer():
         elif args.image == "cv":
             sinara_image_num = 2
 
-        if args.experimental is None:
-            sinara_image_exp = ""
-            while sinara_image_exp not in ["y", "n"]:
-                try:
-                    sinara_image_exp = input('Update experimental image, y/n: ')
-                except ValueError:
-                    pass
-            args_dict['experimental'] = sinara_image_exp
-
-        sinara_image = SinaraServer.sinara_images[ str_to_bool(args.experimental) ][ sinara_image_num-1 ]
+        sinara_image = SinaraServer.sinara_images[ int(args.experimental) ][ sinara_image_num-1 ]
         docker_pull_image(sinara_image)
         print(f'Sinara server image {sinara_image} updated successfully')
