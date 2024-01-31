@@ -197,7 +197,7 @@ class SinaraModel:
             docker_container_run(
                 image=args.modelImage,
                 name=args.modelContainerName,
-                shm_size="512m",
+                shm_size=args.shmSize,
                 ports={"5000": "5000"},
                 device_requests=gpu_requests,  # '--gpus all' flag equivalent in python docker client
             )

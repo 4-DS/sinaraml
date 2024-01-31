@@ -97,6 +97,12 @@ class SinaraServer:
             help="Maximum amount of memory for server container (default: %(default)s)",
         )
         SinaraServer.create_parser.add_argument(
+            "--shmSize",
+            default="512m",
+            type=str,
+            help="Maximum amount of shared memory for server container (default: %(default)s)",
+        )
+        SinaraServer.create_parser.add_argument(
             "--cpuLimit",
             default="4",
             type=int,
@@ -346,7 +352,7 @@ class SinaraServer:
             * int(
                 args.cpuLimit
             ),  # '--cpus' parameter equivalent in python docker client
-            shm_size="512m",
+            shm_size=args.shmSize,
             ports=SinaraServer.get_ports_mapping(),
             volumes=docker_volumes,
             environment={
