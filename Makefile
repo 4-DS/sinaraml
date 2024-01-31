@@ -17,4 +17,3 @@ clean:
 	rm -rf build
 	rm -rf *.egg-info
 	rm -rf dist
-	pip3 uninstall sinaraml -y
