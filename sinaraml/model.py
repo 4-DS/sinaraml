@@ -243,7 +243,8 @@ class SinaraModel:
         )
 
         docker_container_create(
-            image=args.modelImage, name=SinaraModel.model_container_name,
+            image=args.modelImage,
+            name=SinaraModel.model_container_name,
         )
 
         shutil.rmtree(args.extractTo)
