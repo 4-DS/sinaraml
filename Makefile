@@ -1,4 +1,4 @@
-all: clean format sdist wheel
+all: clean format wheel sdist
 	ls -lah dist
 
 sdist:
@@ -8,11 +8,12 @@ wheel:
 	python3 -m build . --wheel
 
 format:
-	python3 -m black --config pyproject.toml .
+	python3 -m black .
 	python3 -m isort --profile black .
 	python3 -m flake8
 
 clean:
+	rm -rf sinaraml/_version.py
 	rm -rf build
 	rm -rf *.egg-info
 	rm -rf dist

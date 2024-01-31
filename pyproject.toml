@@ -1,6 +1,10 @@
 [build-system]
-requires = ['hatchling', "hatch-vcs>=0.3.0"]
-build-backend = 'hatchling.build'
+requires = [
+    "setuptools>=42",
+    "wheel",
+    "build",
+]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "sinaraml"
@@ -18,12 +22,15 @@ classifiers = [
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: Implementation :: CPython",
         "Topic :: Scientific/Engineering :: Artificial Intelligence"
 ]
 dependencies = [
-    "docker>=4.3.1",
-    'importlib-metadata; python_version>="3.6"'
+    "docker>=4.3.1"
 ]
 dynamic = ["version"]
 
@@ -33,33 +40,6 @@ dynamic = ["version"]
 [project.scripts]
 sinara = "sinaraml.sinaraml:main"
 
-[tool.hatch.version]
-source = "vcs"
-fallback-version = "0.0.0"
-
-[tool.hatch.build]
-dev-mode-dirs = ["."]
-
-[tool.hatch.build.hooks.vcs]
-version-file = "sinaraml/_version.py"
-
-[tool.hatch.version.raw-options]
-git_describe_command = [
-    "git",
-    "describe",
-    "--dirty",
-    "--tags",
-    "--long",
-    "--first-parent",
-]
-version_scheme = "post-release"
-fallback_version = "0.0.0"
-
-[tool.hatch.metadata]
-allow-direct-references = true
-
-[tool.hatch.build.targets.sdist]
-only-include = ["sinaraml"]
-
-[tool.hatch.build.targets.wheel]
-packages = ["sinaraml"]
+[tool.black]
+line-length = 88
+color = true
