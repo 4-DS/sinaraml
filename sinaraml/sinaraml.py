@@ -5,9 +5,23 @@ import logging
 from .server import SinaraServer
 from .model import SinaraModel
 
+from .plugin_loader import SinaraPluginLoader
+
 def init_cli(root_parser, subject_parser):
-    SinaraServer.add_command_handlers(root_parser, subject_parser)
-    SinaraModel.add_command_handlers(subject_parser)
+    overloaded_modules = []
+    for infra_plugin in SinaraPluginLoader.get_infra_plugins():
+        module = SinaraPluginLoader.get_infra_plugin(infra_plugin)
+        for plugin_class in module.get_plugin_classes():
+            print(plugin_class.__name__)
+            for base in plugin_class.__bases__:
+                print(base.__name__)
+                overloaded_modules.append(base.__name__)
+            plugin_class.add_command_handlers(subject_parser)
+
+    if not 'SinaraServer' in overloaded_modules:
+        SinaraServer.add_command_handlers(root_parser, subject_parser)
+    if not 'SinaraModel' in overloaded_modules:
+        SinaraModel.add_command_handlers(subject_parser)
 
 def setup_logging(use_vebose=False):
     logging.basicConfig(format="%(levelname)s: %(message)s")
