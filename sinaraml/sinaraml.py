@@ -4,10 +4,9 @@ import argparse
 import logging
 
 from .model import SinaraModel
+from .plugin_loader import SinaraPluginLoader
 from .server import SinaraServer
 
-
-from .plugin_loader import SinaraPluginLoader
 
 def init_cli(root_parser, subject_parser):
     overloaded_modules = []
@@ -20,9 +19,9 @@ def init_cli(root_parser, subject_parser):
                 overloaded_modules.append(base.__name__)
             plugin_class.add_command_handlers(subject_parser)
 
-    if not 'SinaraServer' in overloaded_modules:
+    if "SinaraServer" not in overloaded_modules:
         SinaraServer.add_command_handlers(root_parser, subject_parser)
-    if not 'SinaraModel' in overloaded_modules:
+    if "SinaraModel" not in overloaded_modules:
         SinaraModel.add_command_handlers(subject_parser)
 
 
