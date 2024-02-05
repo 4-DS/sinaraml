@@ -1,9 +1,11 @@
 import hashlib
-import re
-import urllib
-import time
-import socket
+import logging
 import os
+import re
+import socket
+import time
+import urllib
+
 
 def compute_md5(file_name):
     hash_md5 = hashlib.md5()
@@ -12,11 +14,13 @@ def compute_md5(file_name):
             hash_md5.update(chunk)
     return hash_md5.hexdigest()
 
+
+# fmt: off
 def ip_address_is_valid(ip_address):
-    ip_v4_seg  = r'(?:25[0-5]|(?:2[0-4]|1{0,1}[0-9]){0,1}[0-9])'
+    ip_v4_seg = r'(?:25[0-5]|(?:2[0-4]|1{0,1}[0-9]){0,1}[0-9])'
     ip_v4_addr = r'(?:(?:' + ip_v4_seg + r'\.){3,3}' + ip_v4_seg + r')'
 
-    ip_v6_seg  = r'(?:(?:[0-9a-fA-F]){1,4})'
+    ip_v6_seg = r'(?:(?:[0-9a-fA-F]){1,4})'
     ip_v6_groups = (
         r'(?:' + ip_v6_seg + r':){7,7}' + ip_v6_seg,                  # 1:2:3:4:5:6:7:8
         r'(?:' + ip_v6_seg + r':){1,7}:',                           # 1::                                 1:2:3:4:5:6:7::
@@ -37,13 +41,17 @@ def ip_address_is_valid(ip_address):
     ip_v6 = None
     try:
         ip_v4 = re.search(ip_v4_addr, ip_address).group()
-    except:
-        pass
+    except Exception as e:
+        # E722 do not use bare 'except'
+        logging.debug(e, exc_info=True)
     try:
         ip_v6 = re.search(ip_v6_addr, ip_address).group()
-    except:
-        pass
+    except Exception as e:
+        # E722 do not use bare 'except'
+        logging.debug(e, exc_info=True)
     return bool(ip_v4 or ip_v6)
+# fmt: on
+
 
 def get_public_ip():
     public_ip_service_url = "https://ipinfo.io/ip"
@@ -52,32 +60,36 @@ def get_public_ip():
         try:
             response = urllib.request.urlopen(public_ip_service_url)
         except (urllib.error.HTTPError, urllib.error.URLError) as e:
+            logging.debug(e, exc_info=True)
             time.sleep(2)
             continue
         except socket.timeout as e:
+            logging.debug(e, exc_info=True)
             time.sleep(2)
             continue
         else:
             with response as f:
-                public_ip = f.read().decode('utf-8')
+                public_ip = f.read().decode("utf-8")
                 if ip_address_is_valid(public_ip):
                     result = public_ip
             break
     return result
 
+
 def get_expanded_path(dest_path):
     dest_path = str(dest_path).lstrip()
-    if dest_path[0] == '~':
+    if dest_path[0] == "~":
         result = os.path.expanduser(dest_path)
     else:
         result = os.path.abspath(dest_path)
     return result
 
+
 def str_to_bool(value):
     value = value.lower()
-    if value in ('y', 'yes', 't', 'true', 'on', '1'):
+    if value in ("y", "yes", "t", "true", "on", "1"):
         return True
-    elif value in ('n', 'no', 'f', 'false', 'off', '0'):
+    elif value in ("n", "no", "f", "false", "off", "0"):
         return False
     else:
         raise ValueError("invalid truth value %r" % (value,))
