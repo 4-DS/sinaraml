@@ -4,6 +4,28 @@ import urllib
 import time
 import socket
 import os
+import json
+
+def get_bentoservice_profile_name(bentoservice_dir):
+    profile = None
+    profile_file = os.path.join(bentoservice_dir, 'bentoservice_profile.json')
+    if os.path.isfile(profile_file):
+        with open(profile_file, 'r+') as f:
+            profile_data = json.load(f)
+            profile = profile_data['bentoservice_profile']['name']
+    return profile
+
+def replace_bentoservice_model_server_image(dockerfile_path, model_server_image):
+    insert_marker = 'from '
+    with open(dockerfile_path, 'r+') as docker_file:
+        dockerfile_content = docker_file.readlines()
+        marker_index = [idx for idx, s in enumerate(dockerfile_content) if insert_marker in s.lower()][0]
+        insert_index = marker_index + 1
+        del dockerfile_content[0]
+        dockerfile_content.insert(0, f"FROM {model_server_image}\n")
+        docker_file.seek(0)
+        docker_file.writelines(dockerfile_content)
+        docker_file.truncate()
 
 def compute_md5(file_name):
     hash_md5 = hashlib.md5()
