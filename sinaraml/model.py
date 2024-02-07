@@ -6,7 +6,12 @@ from pathlib import Path
 
 from docker import types
 
-from .common_utils import compute_md5, get_expanded_path
+from .common_utils import (
+    compute_md5,
+    get_bentoservice_profile_name,
+    get_expanded_path,
+    replace_bentoservice_model_server_image,
+)
 from .docker_utils import (
     docker_build_image,
     docker_container_create,
@@ -17,6 +22,12 @@ from .docker_utils import (
     docker_container_stop,
     docker_copy_from_container,
 )
+
+bentoservice_profiles_supported = {
+    "SinaraOnnxBentoService": "onnx",
+    "SinaraPytorchBentoService": "pytorch",
+    "SinaraBinaryBentoService": "binary",
+}
 
 
 class SinaraModel:
@@ -143,6 +154,7 @@ class SinaraModel:
         model_zip_path = bentoservice_cache_dir / "model.zip"
         success_file_path = bentoservice_cache_dir / "_SUCCESS"
         save_info_path = bentoservice_cache_dir / "save_info.txt"
+        bentoservice_dockerfile_path = bentoservice_cache_dir / "Dockerfile"
 
         with zipfile.ZipFile(model_zip_path, "r") as model_zip:
             model_zip.extractall(path=bentoservice_cache_dir)
@@ -156,6 +168,20 @@ class SinaraModel:
         )
 
         SinaraModel.save_extra_info(bentoservice_cache_dir, model_image_name_full)
+
+        bentoservice_profile = get_bentoservice_profile_name(bentoservice_cache_dir)
+        if bentoservice_profile:
+            if bentoservice_profile not in bentoservice_profiles_supported.keys():
+                raise Exception(
+                    f'Unsupported bentoservice profile "{bentoservice_profile}" in bentoservice found. Supported: {", ".join(bentoservice_profiles_supported.keys())}'
+                )
+
+            print(f"Using bentoservice profile: {bentoservice_profile}")
+
+            if bentoservice_profile == "SinaraOnnxBentoService":
+                replace_bentoservice_model_server_image(
+                    bentoservice_dockerfile_path, "buslovaev/sinara-onnx-model-server"
+                )
 
         print(f"Building model image {model_image_name_full}")
         docker_build_image(
