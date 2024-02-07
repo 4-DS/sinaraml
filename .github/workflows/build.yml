@@ -5,7 +5,11 @@ on:
   - workflow_call
 
 jobs:
+  lint:
+    uses: ./.github/workflows/linter.yml
+
   build_wheels:
+    needs: [lint]
     name: Build wheel
     runs-on: ubuntu-latest
     steps:
@@ -20,6 +24,7 @@ jobs:
           path: ./dist/*.whl
   
   build_sdist:
+    needs: [lint]
     name: Build source distribution
     runs-on: ubuntu-latest
     steps:
