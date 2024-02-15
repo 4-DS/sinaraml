@@ -230,7 +230,8 @@ class SinaraServer():
                 "INFRA_NAME": args.infraName
             },
             labels = {
-                "sinaraml.platform": str(args.platform)
+                "sinaraml.platform": str(args.platform),
+                "sinaraml.infra": str(args.infraName)
             },
             device_requests = gpu_requests # '--gpus all' flag equivalent in python docker client
         )
