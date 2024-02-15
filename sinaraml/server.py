@@ -64,6 +64,7 @@ class SinaraServer():
         SinaraServer.create_parser.add_argument('--platform', default=SinaraPlatform.Desktop, choices=list(SinaraPlatform), type=SinaraPlatform, help='Server platform - host where the server is run')
         SinaraServer.create_parser.add_argument('--experimental', action='store_true', help='Use expermiental server images')
         SinaraServer.create_parser.add_argument('--image', type=str, help='Custom server image name')
+        SinaraServer.create_parser.add_argument('--shm_size', type=str, default="512m", help='Docker shared memory size option (default: %(default)s)')
         SinaraServer.create_parser.set_defaults(func=SinaraServer.create)
 
     @staticmethod
@@ -219,7 +220,7 @@ class SinaraServer():
             mem_reservation = args.memRequest,
             mem_limit = args.memLimit,
             nano_cpus = 1000000000 * int(args.cpuLimit), # '--cpus' parameter equivalent in python docker client
-            shm_size = "512m",
+            shm_size = args.shm_size,
             ports = SinaraServer.get_ports_mapping(),
             volumes = docker_volumes,
             environment = {
