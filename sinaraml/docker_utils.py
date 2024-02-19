@@ -4,6 +4,7 @@ import os
 import tarfile
 from pathlib import Path
 import logging
+import tqdm
     
 
 def docker_volume_exists(volume_name):
@@ -74,7 +75,7 @@ def docker_container_create(image, command=None, **kwargs):
         client.containers.create(image, command=command, **kwargs)
     except errors.ImageNotFound:
             print(f"Pulling image {image}")
-            client.images.pull(image)
+            docker_pull_image(image)
             print(f"Creating container")
             client.containers.create(image, command=command, **kwargs)
     except Exception as e:
@@ -88,7 +89,7 @@ def docker_container_run(image, command=None, **kwargs):
         return output
     except errors.ImageNotFound:
             print(f"Pulling image {image}")
-            client.images.pull(image)
+            docker_pull_image(image)
             print(f"Running container")
             client.containers.run(image, command=command, **kwargs)
             return output
@@ -167,8 +168,15 @@ def docker_copy_from_container(container_name, src_path, dest_path):
 
 def docker_build_image(**kwargs):
     try:
+        if "decode" not in kwargs:
+            kwargs_with_logging = dict(kwargs, decode=True)
+        else:
+            kwargs_with_logging = dict(kwargs)
         client = docker.from_env()
-        client.images.build(**kwargs)
+        for data in client.api.build(**kwargs_with_logging):
+            if "stream" in data:
+                print(data["stream"])
+        
     except Exception as e:
         logging.debug(e)
         raise Exception(f'Cannot build image.\nCheck if you have permission to access docker')
@@ -176,7 +184,30 @@ def docker_build_image(**kwargs):
 def docker_pull_image(image):
     try:
         client = docker.from_env()
-        client.images.pull(image)
+        with tqdm.tqdm(unit=" b") as progress_bar:
+            layers = {}
+            for data in client.api.pull(image, stream=True, decode=True):
+                progress = data.get("progressDetail")
+                layer_id = data.get("id")
+
+                if (layer_id is not None) and (progress is not None):
+                    layers[layer_id] = progress
+
+                    progress_bar.total = sum(
+                        [
+                            val.get("total", 0)
+                            for _, val in layers.items()
+                            if val is not None
+                        ]
+                    )
+                    progress_bar.n = sum(
+                        [
+                            val.get("current", 0)
+                            for _, val in layers.items()
+                            if val is not None
+                        ]
+                    )
+                progress_bar.update(0)
     except Exception as e:
         logging.debug(e)
         raise Exception(f'Cannot pull image {image}.\nCheck if you have permission to access docker')
