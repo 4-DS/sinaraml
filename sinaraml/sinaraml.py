@@ -12,9 +12,7 @@ def init_cli(root_parser, subject_parser):
     for infra_plugin in SinaraPluginLoader.get_infra_plugins():
         module = SinaraPluginLoader.get_infra_plugin(infra_plugin)
         for plugin_class in module.get_plugin_classes():
-            print(plugin_class.__name__)
             for base in plugin_class.__bases__:
-                print(base.__name__)
                 overloaded_modules.append(base.__name__)
             plugin_class.add_command_handlers(subject_parser)
 
