@@ -1,10 +1,12 @@
 import docker
 from docker import errors
-import os
 import tarfile
 from pathlib import Path
 import logging
 import tqdm
+from time import sleep
+import http.client
+import json
     
 
 def docker_volume_exists(volume_name):
@@ -235,3 +237,55 @@ def docker_get_container_labels(container_name):
     except Exception as e:
         logging.debug(e)
         raise Exception(f'Cannot get labels of container {container_name}.\nCheck if you have permission to access docker containers')
+    
+def docker_get_latest_image_version(image_name, repo_name="buslovaev"):
+    registry_host = "hub.docker.com"
+    next_url = f"/v2/repositories/{repo_name}/{image_name}/tags?page=1&page_size=50"
+    # fallback to latest version if no version tag is found in repo
+    result = 'latest'
+    image_items = []
+
+    conn = http.client.HTTPSConnection(registry_host)
+    payload = ''
+    headers = {}
+    tries_left = 3
+    response = None
+    while next_url:
+        page_data = {}
+        while tries_left > 0:
+            try:
+                response = None
+                conn.request("GET", next_url, payload, headers)
+                response = conn.getresponse()
+                if response.status >= 400:
+                    raise Exception(f'Bad status {response.status} response from {registry_host}')
+                else:
+                    break
+            except Exception as e:
+                logging.debug(e)
+                tries_left -= 1
+                conn.close()
+                sleep(3)
+                conn.connect()
+
+        if not response or response.status >= 400:
+            logging.warning(f"Cannot get image version for {image_name}")
+        else:
+            data = response.read()
+            page_data = json.loads(data)
+
+        if "results" in page_data:
+            image_items.extend(page_data['results'])
+
+        next_url = page_data['next'] if "next" in page_data else None
+
+    if image_items:
+        latest_items = [item for item in image_items if "digest" in item and item["name"] == "latest"]
+        if latest_items:
+            latest_digest = latest_items[0]['digest']
+            image_tags = [item["name"] for item in image_items if "digest" in item and item["digest"] == latest_digest and item["name"] != "latest"]
+            if image_tags:
+                image_tags.sort(key=str.lower, reverse=True)
+                result = image_tags[0]
+
+    return result

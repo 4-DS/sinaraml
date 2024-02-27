@@ -15,7 +15,8 @@ from .docker_utils import ensure_docker_volume, \
                           docker_container_exec, \
                           docker_pull_image, \
                           docker_get_port_on_host, \
-                          docker_get_container_labels
+                          docker_get_container_labels, \
+                          docker_get_latest_image_version
 from .common_utils import get_public_ip, get_expanded_path, str_to_bool
 from .platform import SinaraPlatform
 from .infra import SinaraInfra
@@ -200,8 +201,11 @@ class SinaraServer():
 
         if not args.image:
             sinara_image = SinaraServer.sinara_images[ int(args.experimental) ][ int(sinara_image_num - 1) ]
+            versioned_image_tag = docker_get_latest_image_version(sinara_image.split('/')[-1])
+            sinara_image_versioned = f"{sinara_image.replace('latest', '')}:{versioned_image_tag}"
         else:
             sinara_image = args.image
+            sinara_image_versioned = sinara_image
 
         if args.runMode == "q":
             docker_volumes = SinaraServer._prepare_quick_mode(args)
@@ -227,7 +231,8 @@ class SinaraServer():
                 "DSML_USER": "jovyan",
                 "JUPYTER_ALLOW_INSECURE_WRITES": "true",
                 "JUPYTER_RUNTIME_DIR": "/tmp",
-                "INFRA_NAME": args.infraName
+                "INFRA_NAME": args.infraName,
+                "JUPYTER_IMAGE_SPEC": sinara_image_versioned
             },
             labels = {
                 "sinaraml.platform": str(args.platform),
