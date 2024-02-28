@@ -28,6 +28,7 @@ classifiers = [
 dependencies = [
     "docker>=4.3.1",
     "tqdm",
+    "requests",
     'importlib-metadata; python_version>="3.6"'
 ]
 dynamic = ["version"]

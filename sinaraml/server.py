@@ -353,6 +353,7 @@ class SinaraServer():
     
     @staticmethod
     def wait_for_token(jupyter_ui_url):
+        import urllib.request
         http_exception = None
         for i in range(30):
             try:

@@ -6,6 +6,7 @@ from .server import SinaraServer
 from .model import SinaraModel
 
 from .plugin_loader import SinaraPluginLoader
+from docker import errors
 
 def init_cli(root_parser, subject_parser):
     overloaded_modules = []
@@ -71,11 +72,27 @@ def main():
             args.func(args)
             exit_code = 0
         except Exception as e:
-            if args.verbose:
-                logging.exception(e)
-            else:
-                logging.error(e)
-    
+            from requests.exceptions import ConnectionError
+
+            if isinstance(e.__cause__, ConnectionError):
+                logging.error("Docker daemon is not available, make sure docker is running and you have permissions to access it. Run CLI with sinara --verbose flag to see details")
+
+            elif isinstance(e, errors.APIError):
+                if e.is_client_error():
+                    if e.status_code == 404:
+                        logging.error(f"Docker image or container not found, Run CLI with sinara --verbose flag to see details")
+                    elif e.status_code == 401 or e.status_code == 403:
+                        logging.error(f"Make sure you have permissions to access requested resource. Run CLI with sinara --verbose flag to see details")                        
+                    else:
+                        logging.error("Docker client has failed, Run CLI with sinara --verbose flag to see details")
+                else:
+                    logging.error("Docker daemon failed, Run CLI with sinara --verbose flag to see details")
+
+            elif isinstance(e, errors.DockerException):
+                logging.error("Docker client has failed, Run CLI with sinara --verbose flag to see details")
+
+            logging.error(e, exc_info=args.verbose)
+                
     return exit_code
 
 if __name__ == "__main__":
