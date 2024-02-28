@@ -80,7 +80,7 @@ def main():
             elif isinstance(e, errors.APIError):
                 if e.is_client_error():
                     if e.status_code == 404:
-                        logging.error(f"Docker image or container not found, Run CLI with sinara --verbose flag to see details")
+                        logging.error(f"Docker image or container not found. Run CLI with sinara --verbose flag to see details")
                     elif e.status_code == 401 or e.status_code == 403:
                         logging.error(f"Make sure you have permissions to access requested resource. Run CLI with sinara --verbose flag to see details")                        
                     else:
