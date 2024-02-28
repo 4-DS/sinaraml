@@ -103,3 +103,9 @@ def str_to_bool(value):
         return False
     else:
         raise ValueError("invalid truth value %r" % (value,))
+    
+def get_system_cpu_count():
+    return len(os.sched_getaffinity(0))
+
+def get_system_memory_size():
+    return os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES')

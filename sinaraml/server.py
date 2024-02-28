@@ -17,7 +17,7 @@ from .docker_utils import ensure_docker_volume, \
                           docker_get_port_on_host, \
                           docker_get_container_labels, \
                           docker_get_latest_image_version
-from .common_utils import get_public_ip, get_expanded_path, str_to_bool
+from .common_utils import get_public_ip, get_expanded_path, get_system_cpu_count, get_system_memory_size
 from .platform import SinaraPlatform
 from .infra import SinaraInfra
 from .plugin_loader import SinaraPluginLoader
@@ -53,9 +53,8 @@ class SinaraServer():
         SinaraServer.create_parser.add_argument('--runMode', default='q', choices=["q", "b"], help='Runmode, quick (q) - work, data, tmp will be mounted inside docker volumes, basic (b) - work, data, tmp will be mounted from host folders (default: %(default)s)')
         SinaraServer.create_parser.add_argument('--createFolders', default='y', choices=["y", "n"], help='y - create work, data, tmp folders in basic mode automatically, n - folders must be created manually (default: %(default)s)')
         SinaraServer.create_parser.add_argument('--gpuEnabled', choices=["y", "n"], help='y - Enables docker container to use Nvidia GPU, n - disable GPU')
-        SinaraServer.create_parser.add_argument('--memRequest', default='4g', type=str, help='Amount of memory requested for server container (default: %(default)s)')
-        SinaraServer.create_parser.add_argument('--memLimit', default='8g', type=str, help='Maximum amount of memory for server container (default: %(default)s)')
-        SinaraServer.create_parser.add_argument('--cpuLimit', default='4', type=int, help='Number of CPU cores to use for server container (default: %(default)s)')
+        SinaraServer.create_parser.add_argument('--memLimit', default=str(SinaraServer.get_memory_size_limit()), type=str, help='Maximum amount of memory for server container (default: %(default)s)')
+        SinaraServer.create_parser.add_argument('--cpuLimit', default=SinaraServer.get_cpu_cores_limit(), type=int, help='Number of CPU cores to use for server container (default: %(default)s)')
         SinaraServer.create_parser.add_argument('--jovyanRootPath', type=str, help='Path to parent folder for data, work and tmp (only used in basic mode with createFolders=y)')
         SinaraServer.create_parser.add_argument('--jovyanDataPath', type=str, help='Path to data fodler on host (only used in basic mode)')
         SinaraServer.create_parser.add_argument('--jovyanWorkPath', type=str, help='Path to work folder on host (only used in basic mode)')
@@ -158,6 +157,28 @@ class SinaraServer():
         return infras
 
     @staticmethod
+    def get_cpu_cores_limit():
+        cpu_cores = get_system_cpu_count()
+        cores_reserve_for_host = 1
+        if not cpu_cores or cpu_cores <= cores_reserve_for_host:
+            result = 1
+        else:
+            result = cpu_cores - cores_reserve_for_host
+        return result
+
+    @staticmethod
+    def get_memory_size_limit():
+        total_mem_bytes = get_system_memory_size()
+        bytes_reserve_for_host = int(4 * 1024.**3) # Reserve 4 Gb by default
+        if total_mem_bytes <= bytes_reserve_for_host:
+            result = int(total_mem_bytes * 0.7)
+        else:
+            result = int(total_mem_bytes - bytes_reserve_for_host)
+        return result      
+
+    
+
+    @staticmethod
     def create(args):
         infras = SinaraServer.get_available_infras()
         current_infra = str(args.infraName)
@@ -221,7 +242,6 @@ class SinaraServer():
             command = server_cmd,
             working_dir = "/home/jovyan/work",
             name = args.instanceName,
-            mem_reservation = args.memRequest,
             mem_limit = args.memLimit,
             nano_cpus = 1000000000 * int(args.cpuLimit), # '--cpus' parameter equivalent in python docker client
             shm_size = args.shm_size,
