@@ -5,8 +5,7 @@ from pathlib import Path
 import logging
 import tqdm
 from time import sleep
-import http.client
-import json
+import requests
     
 
 def docker_volume_exists(volume_name):
@@ -181,7 +180,6 @@ def docker_get_latest_image_version(image_name, repo_name="buslovaev"):
     result = 'latest'
     image_items = []
 
-    conn = http.client.HTTPSConnection(registry_host)
     payload = ''
     headers = {}
     tries_left = 3
@@ -191,24 +189,20 @@ def docker_get_latest_image_version(image_name, repo_name="buslovaev"):
         while tries_left > 0:
             try:
                 response = None
-                conn.request("GET", next_url, payload, headers)
-                response = conn.getresponse()
-                if response.status >= 400:
+                response = requests.get(f"https://{registry_host}{next_url}")
+                if response.status_code >= 400:
                     raise Exception(f'Bad status {response.status} response from {registry_host}')
                 else:
                     break
             except Exception as e:
                 logging.debug(e)
                 tries_left -= 1
-                conn.close()
                 sleep(3)
-                conn.connect()
 
-        if not response or response.status >= 400:
+        if not response or response.status_code >= 400:
             logging.warning(f"Cannot get image version for {image_name}")
         else:
-            data = response.read()
-            page_data = json.loads(data)
+            page_data = response.json()
 
         if "results" in page_data:
             image_items.extend(page_data['results'])
