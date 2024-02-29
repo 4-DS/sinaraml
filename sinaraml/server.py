@@ -280,7 +280,7 @@ class SinaraServer():
     def _prepare_basic_mode(args):
         if args.createFolders == "y":
             if not args.jovyanRootPath:
-                jovyan_root_path = ( input('Please, choose jovyan Root folder path (data, work and tmp will be created there): ') )
+                jovyan_root_path = get_expanded_path( input('Please, choose jovyan Root folder path (data, work and tmp will be created there): ') )
             
             jovyan_data_path = os.path.join(jovyan_root_path, "data")
             jovyan_work_path = os.path.join(jovyan_root_path, "work")

@@ -91,6 +91,8 @@ def get_expanded_path(dest_path):
     dest_path = str(dest_path).lstrip()
     if dest_path[0] == '~':
         result = os.path.expanduser(dest_path)
+    elif dest_path[0] != os.sep:
+        result = os.path.join(os.getcwd(), dest_path)
     else:
         result = os.path.abspath(dest_path)
     return result
