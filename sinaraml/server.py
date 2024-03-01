@@ -252,7 +252,9 @@ class SinaraServer():
                 "JUPYTER_ALLOW_INSECURE_WRITES": "true",
                 "JUPYTER_RUNTIME_DIR": "/tmp",
                 "INFRA_NAME": args.infraName,
-                "JUPYTER_IMAGE_SPEC": sinara_image_versioned
+                "JUPYTER_IMAGE_SPEC": sinara_image_versioned,
+                "SINARA_SERVER_MEMORY_LIMIT": args.memLimit,
+                "SINARA_SERVER_CORES": int(args.cpuLimit)
             },
             labels = {
                 "sinaraml.platform": str(args.platform),
