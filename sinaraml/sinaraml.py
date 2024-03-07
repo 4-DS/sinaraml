@@ -2,6 +2,8 @@
 
 import argparse
 import logging
+import platform
+import sys
 from .server import SinaraServer
 from .model import SinaraModel
 
@@ -35,9 +37,17 @@ def get_cli_version():
         logging.info(e)
     return 'unknown'
 
+def platform_is_supported():
+    platform_name = platform.system().lower()
+    return platform_name == "linux" or platform_name == "darwin"
+
 def main():
 
     exit_code = -1
+
+    if not platform_is_supported():
+        print(f'Your OS "{platform.system()}" is not supported. Check https://github.com/4-DS/sinara-tutorials/wiki/SinaraML-Known-issues#error-message-your-os-is-not-supported')
+        return exit_code
 
     # add root parser and root subcommand parser (subject)
     parser = argparse.ArgumentParser()
@@ -96,4 +106,4 @@ def main():
     return exit_code
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
