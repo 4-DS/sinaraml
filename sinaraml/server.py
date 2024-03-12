@@ -293,12 +293,14 @@ class SinaraServer():
             os.makedirs(jovyan_work_path, exist_ok=True)
             os.makedirs(jovyan_tmp_path, exist_ok=True)
         else:
-            if not args.jovyanDataPath:
-                jovyan_data_path = get_expanded_path( input("Please, choose jovyan Data path: ") )
-            if not args.jovyanWorkPath:
-                jovyan_work_path = get_expanded_path( input("Please, choose jovyan Work path: ") )
-            if not args.jovyanTmpPath:
-                jovyan_tmp_path = get_expanded_path( input("Please, choose jovyan Tmp path: ") )
+            jovyan_data_path = get_expanded_path(args.jovyanDataPath) if args.jovyanDataPath else \
+                get_expanded_path( input("Please, choose jovyan Data path: ") )
+            
+            jovyan_work_path = get_expanded_path(args.jovyanWorkPath) if args.jovyanWorkPath else \
+                get_expanded_path( input("Please, choose jovyan Work path: ") )
+
+            jovyan_tmp_path = get_expanded_path(args.jovyanTmpPath) if args.jovyanTmpPath else \
+                get_expanded_path( input("Please, choose jovyan Tmp path: ") )
 
         folders_exist = ''
         while folders_exist not in ["y", "n"]:
