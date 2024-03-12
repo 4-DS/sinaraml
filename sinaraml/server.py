@@ -169,7 +169,7 @@ class SinaraServer():
     @staticmethod
     def get_memory_size_limit():
         total_mem_bytes = get_system_memory_size()
-        bytes_reserve_for_host = int(4 * 1024.**3) # Reserve 4 Gb by default
+        bytes_reserve_for_host = int(2 * 1024.**3) # Reserve 2 Gb by default
         if total_mem_bytes <= bytes_reserve_for_host:
             result = int(total_mem_bytes * 0.7)
         else:
