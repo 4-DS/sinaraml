@@ -280,10 +280,13 @@ class SinaraServer():
 
     @staticmethod
     def _prepare_basic_mode(args):
+        folders_exist = ''
+        
         if args.createFolders == "y":
-            if not args.jovyanRootPath:
-                jovyan_root_path = get_expanded_path( input('Please, choose jovyan Root folder path (data, work and tmp will be created there): ') )
-            
+             
+            jovyan_root_path = get_expanded_path(args.jovyanRootPath) if args.jovyanRootPath else \
+                get_expanded_path( input('Please, choose jovyan Root folder path (data, work and tmp will be created there): ') )
+
             jovyan_data_path = os.path.join(jovyan_root_path, "data")
             jovyan_work_path = os.path.join(jovyan_root_path, "work")
             jovyan_tmp_path = os.path.join(jovyan_root_path, "tmp")
@@ -302,14 +305,13 @@ class SinaraServer():
             jovyan_tmp_path = get_expanded_path(args.jovyanTmpPath) if args.jovyanTmpPath else \
                 get_expanded_path( input("Please, choose jovyan Tmp path: ") )
 
-        folders_exist = ''
-        while folders_exist not in ["y", "n"]:
-            folders_exist = input("Please, ensure that the folders exist (y/n): ")
+            while folders_exist not in ["y", "n"]:
+                folders_exist = input("Please, ensure that the folders exist (y/n): ")
 
-        if folders_exist == "y":
-            print("Trying to run your environment")
-        else:
-            raise Exception("Sorry, you should prepare the folders beforehand")
+            if folders_exist != "y":
+                raise Exception("Sorry, you should prepare the folders beforehand")
+        
+        print("Trying to run your environment...")
         
         return  [f"{jovyan_data_path}:/data",
                  f"{jovyan_work_path}:/home/jovyan/work",
