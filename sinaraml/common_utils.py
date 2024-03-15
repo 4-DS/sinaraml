@@ -5,6 +5,8 @@ import time
 import socket
 import os
 import json
+from pathlib import Path
+import shutil
 
 def get_bentoservice_profile_name(bentoservice_dir):
     profile = None
@@ -111,3 +113,10 @@ def get_system_cpu_count():
 
 def get_system_memory_size():
     return os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES')
+
+def delete_folder_contents(dest_folder):
+    for path in Path(dest_folder).glob("**/*"):
+        if path.is_file():
+            path.unlink()
+        elif path.is_dir():
+            shutil.rmtree(path)

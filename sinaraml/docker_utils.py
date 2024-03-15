@@ -219,3 +219,8 @@ def docker_get_latest_image_version(image_name, repo_name="buslovaev"):
                 result = image_tags[0]
 
     return result
+
+def docker_get_container_mounts(container_name):
+    client = docker.from_env()
+    container = client.containers.get(container_name)
+    return client.api.inspect_container(container.id)['Mounts']

@@ -16,8 +16,13 @@ from .docker_utils import ensure_docker_volume, \
                           docker_pull_image, \
                           docker_get_port_on_host, \
                           docker_get_container_labels, \
-                          docker_get_latest_image_version
-from .common_utils import get_public_ip, get_expanded_path, get_system_cpu_count, get_system_memory_size
+                          docker_get_latest_image_version, \
+                          docker_get_container_mounts
+from .common_utils import get_public_ip, \
+                          get_expanded_path, \
+                          get_system_cpu_count, \
+                          get_system_memory_size, \
+                          delete_folder_contents
 from .platform import SinaraPlatform
 from .infra import SinaraInfra
 from .plugin_loader import SinaraPluginLoader
@@ -440,15 +445,23 @@ class SinaraServer():
     def remove(args):
         if not docker_container_exists(args.instanceName):
             print(f"Server with name {args.instanceName} has been already removed")
-        docker_container_remove(args.instanceName)
         if args.withVolumes == "y":
-            print("Removing docker volumes")
-            data_volume = f"jovyan-data-{args.instanceName}"
-            work_volume = f"jovyan-work-{args.instanceName}"
-            tmp_volume =  f"jovyan-tmp-{args.instanceName}"
-            docker_volume_remove(data_volume)
-            docker_volume_remove(work_volume)
-            docker_volume_remove(tmp_volume)
+            container_folders = ["/data", "/home/jovyan/work", "/tmp"]
+            container_volumes = [f"jovyan-data-{args.instanceName}", f"jovyan-work-{args.instanceName}", f"jovyan-tmp-{args.instanceName}"]
+            mounts = docker_get_container_mounts(args.instanceName)
+            docker_container_remove(args.instanceName)
+            for mount in mounts:
+                if mount["Type"] == "bind":
+                    if mount["Destination"] in container_folders:
+                        print(f"Removing sinara volume {mount['Source']}")
+                        delete_folder_contents(mount["Source"])
+
+            # always try to remove docker volumes, in case they are orphaned
+
+            for vol in container_volumes:
+                print(f"Removing sinara volume {vol}")
+                docker_volume_remove(vol)
+
         print(f'Sinara server {args.instanceName} removed')
 
     @staticmethod
