@@ -8,6 +8,19 @@ import json
 from pathlib import Path
 import shutil
 
+class fc:
+    HEADER = '\033[95m'
+    UNDERLINE = '\033[4m'
+    BLACK   = '\033[30m'
+    RED     = '\033[31m'
+    GREEN   = '\033[32m'
+    YELLOW  = '\033[33m'
+    BLUE    = '\033[34m'
+    MAGENTA = '\033[35m'
+    CYAN    = '\033[36m'
+    WHITE   = '\033[37m'
+    RESET   = '\033[39m'
+
 def get_bentoservice_profile_name(bentoservice_dir):
     profile = None
     profile_file = os.path.join(bentoservice_dir, 'bentoservice_profile.json')

@@ -224,3 +224,7 @@ def docker_get_container_mounts(container_name):
     client = docker.from_env()
     container = client.containers.get(container_name)
     return client.api.inspect_container(container.id)['Mounts']
+
+def docker_list_containers(label_key):
+    client = docker.from_env()
+    return client.containers.list(all=True, filters={"label": label_key})

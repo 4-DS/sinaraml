@@ -6,6 +6,9 @@ import re
 import urllib
 import time
 import argparse
+import datetime
+import json
+import subprocess
 from .docker_utils import ensure_docker_volume, \
                           docker_volume_remove, \
                           docker_container_create, \
@@ -18,22 +21,25 @@ from .docker_utils import ensure_docker_volume, \
                           docker_get_port_on_host, \
                           docker_get_container_labels, \
                           docker_get_latest_image_version, \
-                          docker_get_container_mounts
+                          docker_get_container_mounts, \
+                          docker_list_containers
 from .common_utils import get_public_ip, \
                           get_expanded_path, \
                           get_system_cpu_count, \
                           get_system_memory_size, \
-                          delete_folder_contents
+                          delete_folder_contents, \
+                          fc
 from .platform import SinaraPlatform
 from .infra import SinaraInfra
 from .plugin_loader import SinaraPluginLoader
-from .config_manager import SinaraConfigManager
+from .config_manager import SinaraServerConfigManager, SinaraGlobalConfigManager
 
 class SinaraServer():
 
     subject = 'server'
     container_name = 'jovyan-single-use'
     sinara_images = [['buslovaev/sinara-notebook', 'buslovaev/sinara-cv'], ['buslovaev/sinara-notebook-exp', 'buslovaev/sinara-cv-exp']]
+    project_types = ["ml", "cv"]
     root_parser = None
     subject_parser = None
     create_parser = None
@@ -52,6 +58,7 @@ class SinaraServer():
         SinaraServer.add_stop_handler(server_subparsers)
         SinaraServer.add_remove_handler(server_subparsers)
         SinaraServer.add_update_handler(server_subparsers)
+        SinaraServer.add_list_handler(server_subparsers)
 
     @staticmethod
     def add_create_handler(server_cmd_parser):
@@ -72,6 +79,8 @@ class SinaraServer():
         SinaraServer.create_parser.add_argument('--experimental', action='store_true', help='Use expermiental server images')
         SinaraServer.create_parser.add_argument('--image', type=str, help='Custom server image name')
         SinaraServer.create_parser.add_argument('--shm_size', type=str, default="512m", help='Docker shared memory size option (default: %(default)s)')
+        SinaraServer.create_parser.add_argument('--fromConfig', type=str, help='Create a server using server.json config')
+        SinaraServer.create_parser.add_argument('--project', type=str, choices=SinaraServer.project_types, help='Project type for server (default: %(default)s)')
         SinaraServer.create_parser.set_defaults(func=SinaraServer.create)
 
     @staticmethod
@@ -99,6 +108,12 @@ class SinaraServer():
         server_remove_parser.add_argument('--image', choices=["ml", "cv"], help='ml - update ml image, cv - update CV image')
         server_remove_parser.add_argument('--experimental', action='store_true', help='Update expermiental server images')
         server_remove_parser.set_defaults(func=SinaraServer.update)
+
+    @staticmethod
+    def add_list_handler(root_parser):
+        server_list_parser = root_parser.add_parser('list', help='list sinara servers')
+        server_list_parser.add_argument('--hideRemoved', action='store_true', help='Do not show removed servers')
+        server_list_parser.set_defaults(func=SinaraServer.list)
 
     @staticmethod
     def _is_port_free(port):
@@ -202,7 +217,14 @@ class SinaraServer():
         
     @staticmethod
     def _create(args):
-        args_dict = vars(args)
+
+        if args.fromConfig:
+            print(f"Using config {args.fromConfig} to create the sinara server")
+            with open(args.fromConfig, "r") as cfg:
+                server_config = json.load(cfg)
+                server_script_args = server_config["cmd"]["calculated_args"]
+            subprocess.run(f"sinara {server_script_args}", shell=True, env=dict(os.environ), check=True)
+            return
 
         gpu_requests = []
         sinara_image_num = 1
@@ -210,19 +232,23 @@ class SinaraServer():
         if docker_container_exists(args.instanceName):
             print(f"Sinara server {args.instanceName} aleady exists, remove it and run create again")
             return
-
-        if not args.gpuEnabled:
+        
+        if not args.project:
             sinara_image_num = -1
             while sinara_image_num not in [1, 2]:
                 try:
                     sinara_image_num = int(input('Please, choose a Sinara for 1) ML or 2) CV projects: '))
+                    args.project = SinaraServer.project_types[sinara_image_num-1]
                 except ValueError:
                     pass
-            if sinara_image_num == 2:
-                args_dict['gpuEnabled'] = "y"  
-        
+
+        else:
+            sinara_image_num = SinaraServer.project_types.index(args.project)
+
+        if args.project == "cv":
+            args.gpuEnabled = "y"  
+
         if args.gpuEnabled == "y":
-            sinara_image_num = 2
             gpu_requests = [ types.DeviceRequest(count=-1, capabilities=[['gpu']]) ]
 
         if not args.image:
@@ -242,7 +268,7 @@ class SinaraServer():
         if args.insecure:
             server_cmd = f"{server_cmd} --NotebookApp.token='' --NotebookApp.password=''"
 
-        cm = SinaraConfigManager(args.instanceName)
+        cm = SinaraServerConfigManager(args.instanceName)
 
         server_params = {
             "image": sinara_image,
@@ -266,13 +292,14 @@ class SinaraServer():
             "labels": {
                 "sinaraml.platform": str(args.platform),
                 "sinaraml.infra": str(args.infraName),
-                "sinaraml.config.path": str(cm.server_config)
+                "sinaraml.config.path": str(cm.server_config),
+                "sinaraml.project": str(args.project)
             },
             "device_requests": gpu_requests # '--gpus all' flag equivalent in python docker client
         }
 
         docker_container_create(**server_params)
-        SinaraServer.save_server_config(server_params, cm)
+        SinaraServer.save_server_config(server_params, args, cm)
 
         print(f"Sinara server {args.instanceName} is created")
 
@@ -292,12 +319,15 @@ class SinaraServer():
 
     @staticmethod
     def _prepare_basic_mode(args):
-        folders_exist = ''
+        #folders_exist = ''
         
         if args.createFolders == "y":
              
-            jovyan_root_path = get_expanded_path(args.jovyanRootPath) if args.jovyanRootPath else \
-                get_expanded_path( input('Please, choose jovyan Root folder path (data, work and tmp will be created there): ') )
+            if args.jovyanRootPath:
+                jovyan_root_path = get_expanded_path(args.jovyanRootPath)
+            else:
+                jovyan_root_path = get_expanded_path( input('Please, choose jovyan Root folder path (data, work and tmp will be created there): ') )
+                args.jovyanRootPath = jovyan_root_path
 
             jovyan_data_path = os.path.join(jovyan_root_path, "data")
             jovyan_work_path = os.path.join(jovyan_root_path, "work")
@@ -308,20 +338,29 @@ class SinaraServer():
             os.makedirs(jovyan_work_path, exist_ok=True)
             os.makedirs(jovyan_tmp_path, exist_ok=True)
         else:
-            jovyan_data_path = get_expanded_path(args.jovyanDataPath) if args.jovyanDataPath else \
-                get_expanded_path( input("Please, choose jovyan Data path: ") )
+            if args.jovyanDataPath:
+                jovyan_data_path = get_expanded_path(args.jovyanDataPath)
+            else:
+                jovyan_data_path = get_expanded_path( input("Please, choose jovyan Data path: ") )
+                args.jovyanDataPath = jovyan_data_path
             
-            jovyan_work_path = get_expanded_path(args.jovyanWorkPath) if args.jovyanWorkPath else \
-                get_expanded_path( input("Please, choose jovyan Work path: ") )
+            if args.jovyanWorkPath:
+                jovyan_work_path = get_expanded_path(args.jovyanWorkPath)
+            else:
+                jovyan_work_path = get_expanded_path( input("Please, choose jovyan Work path: ") )
+                args.jovyanWorkPath = jovyan_work_path
 
-            jovyan_tmp_path = get_expanded_path(args.jovyanTmpPath) if args.jovyanTmpPath else \
-                get_expanded_path( input("Please, choose jovyan Tmp path: ") )
+            if args.jovyanTmpPath:
+                jovyan_tmp_path = get_expanded_path(args.jovyanTmpPath)
+            else:
+                jovyan_tmp_path = get_expanded_path( input("Please, choose jovyan Tmp path: ") )
+                args.jovyanTmpPath = jovyan_tmp_path
 
-            while folders_exist not in ["y", "n"]:
-                folders_exist = input("Please, ensure that the folders exist (y/n): ")
+            # while folders_exist not in ["y", "n"]:
+            #     folders_exist = input("Please, ensure that the folders exist (y/n): ")
 
-            if folders_exist != "y":
-                raise Exception("Sorry, you should prepare the folders beforehand")
+            # if folders_exist != "y":
+            #     raise Exception("Sorry, you should prepare the folders beforehand")
         
         print("Trying to run your environment...")
         
@@ -407,6 +446,28 @@ class SinaraServer():
                 break
         if http_exception:
             raise http_exception
+        
+    @staticmethod
+    def get_server_clickable_url(server_name):
+        host_port = docker_get_port_on_host(server_name, 8888)
+        server_alive_url = f"http://127.0.0.1:{host_port}"
+
+        # Wait for server token to be available in container logs, may take some time
+        SinaraServer.wait_for_token(server_alive_url)
+
+        url = SinaraServer.get_server_url(server_name)
+        token = SinaraServer.get_server_token(url)
+        token_str = f"?token={token}" if token else ""
+        protocol = SinaraServer.get_server_protocol(url)
+        
+        platform = SinaraServer.get_server_platform(server_name)
+        server_ip = SinaraServer.get_server_ip(platform)
+        server_url = f"{protocol}://{server_ip}:{host_port}/{token_str}"
+
+        if not platform == SinaraPlatform.Desktop:
+            return f"{protocol}://{server_ip}:{host_port}/{token_str}"
+        else:
+            return server_url
 
     @staticmethod
     def start(args):
@@ -418,26 +479,14 @@ class SinaraServer():
         
         docker_container_start(args.instanceName)
         SinaraServer.prepare_mounted_folders(args.instanceName)
-
-        host_port = docker_get_port_on_host(args.instanceName, 8888)
-        server_alive_url = f"http://127.0.0.1:{host_port}"
-
-        # Wait for server token to be available in container logs, may take some time
-        SinaraServer.wait_for_token(server_alive_url)
-
-        url = SinaraServer.get_server_url(args.instanceName)
-        token = SinaraServer.get_server_token(url)
-        token_str = f"?token={token}" if token else ""
-        protocol = SinaraServer.get_server_protocol(url)
         
         platform = SinaraServer.get_server_platform(args.instanceName)
-        server_ip = SinaraServer.get_server_ip(platform)
-        server_url = f"{protocol}://{server_ip}:{host_port}/{token_str}"
+        server_clickable_url = SinaraServer.get_server_clickable_url(args.instanceName)
 
         if not platform == SinaraPlatform.Desktop:
-            server_hint = f"Detected server url {protocol}://{server_ip}:{host_port}/{token_str}\nIf server is not accessible, find your public VM IP address manually"
+            server_hint = f"Detected server url {server_clickable_url}\nIf server is not accessible, find your public VM IP address manually"
         else:
-            server_hint = f"Go to {server_url} to open jupyterlab"
+            server_hint = f"Go to {server_clickable_url} to open jupyterlab"
 
         print(f"Sinara server {args.instanceName} started, platform: {platform}\n{server_hint}")
 
@@ -464,18 +513,19 @@ class SinaraServer():
                         print(f"Removing sinara volume {mount['Source']}")
                         delete_folder_contents(mount["Source"])
 
-        # always try to remove docker volumes, in case they are orphaned
+            # always try to remove docker volumes, in case they are orphaned
+            docker_container_remove(args.instanceName)
 
-        for vol in container_volumes:
-            print(f"Removing sinara volume {vol}")
-            docker_volume_remove(vol)
+            for vol in container_volumes:
+                print(f"Removing sinara volume {vol}")
+                docker_volume_remove(vol)
+        else:
+            docker_container_remove(args.instanceName)
 
-        docker_container_remove(args.instanceName)
-
-        cm = SinaraConfigManager(args.instanceName)
+        cm = SinaraServerConfigManager(args.instanceName)
         server_config = cm.trash_server()            
 
-        print(f'Sinara server {args.instanceName} removed.\n\nTo create it again use command:\nsinara server create --from_config {server_config}')
+        print(f'Sinara server {args.instanceName} removed.\n\nTo create it again use command:\nsinara server create --fromConfig {server_config}')
 
     @staticmethod
     def update(args):
@@ -497,11 +547,70 @@ class SinaraServer():
         print(f'Sinara server image {sinara_image} updated successfully')
 
     @staticmethod
-    def save_server_config(container_params, config_manager):
+    def save_server_config(container_params, args, config_manager):
+        calculated_args = ""
+        for k, v in vars(args).items():
+            if k in ["func", "verbose"]: continue
+            if type(v) == bool and v == True:
+              calculated_args = calculated_args + ' ' + f'--{k}'
+            elif (type(v) == bool and v == False) or not v:
+              continue
+            elif k in ["subject", "action"]:
+                calculated_args = calculated_args + ' ' + f'{v}'
+            else:
+              calculated_args = calculated_args + ' ' + f'--{k}={v}'
+        
+        if args.verbose:
+            calculated_args = " --verbose" + calculated_args
+
         server_config = {
             "subject_type": "server",
             "cli_version" : "",
-            "cmd": " ".join(sys.argv),
+            "cmd": {
+                "script": sys.argv[0],
+                "args": " ".join(sys.argv[1:]),
+                "calculated_args": calculated_args
+            },
             "container": container_params
         }
         config_manager.save_server_config(server_config)
+
+    @staticmethod
+    def get_removed_servers():
+        gcm = SinaraGlobalConfigManager()
+        return gcm.get_trashed_servers()
+
+    @staticmethod
+    def list(args):
+        sinara_containers = docker_list_containers("sinaraml.platform")
+        sinara_removed_server = SinaraServer.get_removed_servers()
+
+        print(f"{fc.HEADER}\nSinara servers:\n-------------------------------------{fc.RESET}")
+        for sinara_container in sinara_containers:
+            print(f"\n{fc.CYAN}Server{fc.RESET}:{fc.WHITE} {sinara_container.name}{fc.RESET}\n" \
+                  f"{fc.CYAN}Image{fc.RESET}: {fc.WHITE}{sinara_container.attrs['Config']['Image']}{fc.RESET}\n" \
+                  f"{fc.CYAN}Status{fc.RESET}: {fc.WHITE}{sinara_container.status}{fc.RESET}")
+            
+            if sinara_container.status.lower() == "running":
+                server_clickable_url = SinaraServer.get_server_clickable_url(sinara_container.name)
+                print(f"{fc.CYAN}Url{fc.RESET}: {fc.WHITE}{server_clickable_url}{fc.RESET}")
+        
+        if not args.hideRemoved:
+            print(f"\n{fc.HEADER}Sinara removed servers:\n-------------------------------------{fc.RESET}")
+            for server in sinara_removed_server:
+                try:
+                    with open(sinara_removed_server[server], 'r') as cfg:
+                        server_config = json.load(cfg)
+
+                    server_name = server_config['container']['name']
+                    server_image = server_config['container']['image']
+                    removal_time = datetime.datetime.strptime(server.split('.')[-1], "%Y%m%d-%H%M%S")
+                    removal_time_str = removal_time.strftime("%d.%m.%Y %H:%M:%S")
+                    reset_command = server_config['cmd']
+                    print(f"\n{fc.CYAN}Server: {fc.WHITE}{server_name}{fc.RESET}\n" \
+                        f"{fc.CYAN}Image{fc.RESET}: {server_image}{fc.RESET}\n" \
+                        f"{fc.CYAN}Status{fc.RESET}: {fc.WHITE}removed{fc.RESET}\n" \
+                        f"{fc.CYAN}Removed at{fc.RESET}: {fc.WHITE}{removal_time_str}{fc.RESET}\n" \
+                        f"{fc.CYAN}To create it again use command{fc.RESET}: {fc.WHITE}\nsinara server create --fromConfig {sinara_removed_server[server]}{fc.RESET}")
+                except Exception as e:
+                    print(f"{fc.RED}\nServer config at {sinara_removed_server[server]} cannot be read, skipping{fc.RESET}")
