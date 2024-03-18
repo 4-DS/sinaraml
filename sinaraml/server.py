@@ -450,26 +450,32 @@ class SinaraServer():
 
     @staticmethod
     def remove(args):
+        container_folders = ["/data", "/home/jovyan/work", "/tmp"]
+        container_volumes = [f"jovyan-data-{args.instanceName}", f"jovyan-work-{args.instanceName}", f"jovyan-tmp-{args.instanceName}"]
+
         if not docker_container_exists(args.instanceName):
             print(f"Server with name {args.instanceName} has been already removed")
+            return
         if args.withVolumes == "y":
-            container_folders = ["/data", "/home/jovyan/work", "/tmp"]
-            container_volumes = [f"jovyan-data-{args.instanceName}", f"jovyan-work-{args.instanceName}", f"jovyan-tmp-{args.instanceName}"]
             mounts = docker_get_container_mounts(args.instanceName)
-            docker_container_remove(args.instanceName)
             for mount in mounts:
                 if mount["Type"] == "bind":
                     if mount["Destination"] in container_folders:
                         print(f"Removing sinara volume {mount['Source']}")
                         delete_folder_contents(mount["Source"])
 
-            # always try to remove docker volumes, in case they are orphaned
+        # always try to remove docker volumes, in case they are orphaned
 
-            for vol in container_volumes:
-                print(f"Removing sinara volume {vol}")
-                docker_volume_remove(vol)
+        for vol in container_volumes:
+            print(f"Removing sinara volume {vol}")
+            docker_volume_remove(vol)
 
-        print(f'Sinara server {args.instanceName} removed')
+        docker_container_remove(args.instanceName)
+
+        cm = SinaraConfigManager(args.instanceName)
+        server_config = cm.trash_server()            
+
+        print(f'Sinara server {args.instanceName} removed.\n\nTo create it again use command:\nsinara server create --from_config {server_config}')
 
     @staticmethod
     def update(args):
