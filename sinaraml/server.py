@@ -1,4 +1,5 @@
 import os
+import sys
 from docker import types
 import socket
 import re
@@ -26,6 +27,7 @@ from .common_utils import get_public_ip, \
 from .platform import SinaraPlatform
 from .infra import SinaraInfra
 from .plugin_loader import SinaraPluginLoader
+from .config_manager import SinaraConfigManager
 
 class SinaraServer():
 
@@ -181,8 +183,6 @@ class SinaraServer():
             result = int(total_mem_bytes - bytes_reserve_for_host)
         return result      
 
-    
-
     @staticmethod
     def create(args):
         infras = SinaraServer.get_available_infras()
@@ -242,31 +242,38 @@ class SinaraServer():
         if args.insecure:
             server_cmd = f"{server_cmd} --NotebookApp.token='' --NotebookApp.password=''"
 
-        docker_container_create(
-            image = sinara_image,
-            command = server_cmd,
-            working_dir = "/home/jovyan/work",
-            name = args.instanceName,
-            mem_limit = args.memLimit,
-            nano_cpus = 1000000000 * int(args.cpuLimit), # '--cpus' parameter equivalent in python docker client
-            shm_size = args.shm_size,
-            ports = SinaraServer.get_ports_mapping(),
-            volumes = docker_volumes,
-            environment = {
+        cm = SinaraConfigManager(args.instanceName)
+
+        server_params = {
+            "image": sinara_image,
+            "command": server_cmd,
+            "working_dir": "/home/jovyan/work",
+            "name": args.instanceName,
+            "mem_limit": args.memLimit,
+            "nano_cpus": 1000000000 * int(args.cpuLimit), # '--cpus' parameter equivalent in python docker client
+            "shm_size": args.shm_size,
+            "ports": SinaraServer.get_ports_mapping(),
+            "volumes": docker_volumes,
+            "environment": {
                 "DSML_USER": "jovyan",
                 "JUPYTER_ALLOW_INSECURE_WRITES": "true",
                 "JUPYTER_RUNTIME_DIR": "/tmp",
-                "INFRA_NAME": args.infraName,
+                "INFRA_NAME": str(args.infraName),
                 "JUPYTER_IMAGE_SPEC": sinara_image_versioned,
                 "SINARA_SERVER_MEMORY_LIMIT": args.memLimit,
                 "SINARA_SERVER_CORES": int(args.cpuLimit)
             },
-            labels = {
+            "labels": {
                 "sinaraml.platform": str(args.platform),
-                "sinaraml.infra": str(args.infraName)
+                "sinaraml.infra": str(args.infraName),
+                "sinaraml.config.path": str(cm.server_config)
             },
-            device_requests = gpu_requests # '--gpus all' flag equivalent in python docker client
-        )
+            "device_requests": gpu_requests # '--gpus all' flag equivalent in python docker client
+        }
+
+        docker_container_create(**server_params)
+        SinaraServer.save_server_config(server_params, cm)
+
         print(f"Sinara server {args.instanceName} is created")
 
     @staticmethod
@@ -482,3 +489,13 @@ class SinaraServer():
         sinara_image = SinaraServer.sinara_images[ int(args.experimental) ][ sinara_image_num-1 ]
         docker_pull_image(sinara_image)
         print(f'Sinara server image {sinara_image} updated successfully')
+
+    @staticmethod
+    def save_server_config(container_params, config_manager):
+        server_config = {
+            "subject_type": "server",
+            "cli_version" : "",
+            "cmd": " ".join(sys.argv),
+            "container": container_params
+        }
+        config_manager.save_server_config(server_config)
