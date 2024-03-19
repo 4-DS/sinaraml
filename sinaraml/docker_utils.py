@@ -227,4 +227,4 @@ def docker_get_container_mounts(container_name):
 
 def docker_list_containers(label_key):
     client = docker.from_env()
-    return client.containers.list(all=True, filters={"label": label_key})
+    return client.containers.list(all=True, ignore_removed=True, sparse=True, filters={"label": label_key})

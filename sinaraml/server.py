@@ -233,7 +233,7 @@ class SinaraServer():
             return
 
         gpu_requests = []
-        sinara_image_num = 1
+        sinara_image_num = 0
 
         if docker_container_exists(args.instanceName):
             print(f"Sinara server {args.instanceName} aleady exists, remove it and run create again")
@@ -241,10 +241,10 @@ class SinaraServer():
         
         if not args.project:
             sinara_image_num = -1
-            while sinara_image_num not in [1, 2]:
+            while sinara_image_num not in [0, 1]:
                 try:
-                    sinara_image_num = int(input('Please, choose a Sinara for 1) ML or 2) CV projects: '))
-                    args.project = SinaraServer.project_types[sinara_image_num-1]
+                    sinara_image_num = int(input('Please, choose a Sinara for 1) ML or 2) CV projects: ')) - 1
+                    args.project = SinaraServer.project_types[sinara_image_num]
                 except ValueError:
                     pass
 
@@ -258,7 +258,7 @@ class SinaraServer():
             gpu_requests = [ types.DeviceRequest(count=-1, capabilities=[['gpu']]) ]
 
         if not args.image:
-            sinara_image = SinaraServer.sinara_images[ int(args.experimental) ][ int(sinara_image_num - 1) ]
+            sinara_image = SinaraServer.sinara_images[ int(args.experimental) ][ int(sinara_image_num) ]
             versioned_image_tag = docker_get_latest_image_version(sinara_image.split('/')[-1])
             sinara_image_versioned = f"{sinara_image.replace('latest', '')}:{versioned_image_tag}"
         else:
@@ -583,22 +583,30 @@ class SinaraServer():
         config_manager.save_server_config(server_config)
 
     @staticmethod
-    def get_removed_servers():
-        gcm = SinaraGlobalConfigManager()
-        return gcm.get_trashed_servers()
-
-    @staticmethod
     def list(args):
+        print("Gathering servers info...")
+        gcm = SinaraGlobalConfigManager()
         sinara_containers = docker_list_containers("sinaraml.platform")
-        sinara_removed_server = SinaraServer.get_removed_servers()
+        sinara_removed_server = gcm.get_trashed_servers()
 
         print(f"{fc.HEADER}\nSinara servers:\n-------------------------------------{fc.RESET}")
         for sinara_container in sinara_containers:
-            print(f"\n{fc.CYAN}Server{fc.RESET}:{fc.WHITE} {sinara_container.name}{fc.RESET}\n" \
-                  f"{fc.CYAN}Image{fc.RESET}: {fc.WHITE}{sinara_container.attrs['Config']['Image']}{fc.RESET}\n" \
-                  f"{fc.CYAN}Status{fc.RESET}: {fc.WHITE}{sinara_container.status}{fc.RESET}")
-            
-            if sinara_container.status.lower() == "running":
+            container_name = sinara_container.attrs["Names"][0][1:]
+            container_image = sinara_container.attrs["Image"]
+            container_status = sinara_container.attrs["Status"]
+            if "sinaraml.project" in sinara_container.attrs["Labels"]:
+                container_project = sinara_container.attrs["Labels"]["sinaraml.project"]
+            else:
+                # fallback to guessing by name
+                if "notebook" in container_image:
+                    container_project = SinaraServer.project_types[0]
+                else:
+                    container_project = SinaraServer.project_types[1]
+            print(f"\n{fc.CYAN}Server{fc.RESET}: {fc.WHITE}{container_name}{fc.RESET}\n" \
+                  f"{fc.CYAN}Image{fc.RESET}: {fc.WHITE}{container_image}{fc.RESET}\n" \
+                  f"{fc.CYAN}Type{fc.RESET}: {fc.WHITE}{container_project}{fc.RESET}\n" \
+                  f"{fc.CYAN}Status{fc.RESET}: {fc.WHITE}{container_status}{fc.RESET}")
+            if sinara_container.attrs['Status'].lower() in ["running", "up"]:
                 server_clickable_url = SinaraServer.get_server_clickable_url(sinara_container.name)
                 print(f"{fc.CYAN}Url{fc.RESET}: {fc.WHITE}{server_clickable_url}{fc.RESET}")
         
@@ -611,11 +619,20 @@ class SinaraServer():
 
                     server_name = server_config['container']['name']
                     server_image = server_config['container']['image']
+                    if "sinaraml.project" in server_config['container']["labels"]:
+                        server_project = server_config['container']["labels"]["sinaraml.project"]
+                    else:
+                        # fallback to guessing by name
+                        if "notebook" in server_image:
+                            server_project = SinaraServer.project_types[0]
+                        else:
+                            server_project = SinaraServer.project_types[1]
                     removal_time = datetime.datetime.strptime(server.split('.')[-1], "%Y%m%d-%H%M%S")
                     removal_time_str = removal_time.strftime("%d.%m.%Y %H:%M:%S")
                     reset_command = server_config['cmd']
                     print(f"\n{fc.CYAN}Server: {fc.WHITE}{server_name}{fc.RESET}\n" \
                         f"{fc.CYAN}Image{fc.RESET}: {server_image}{fc.RESET}\n" \
+                        f"{fc.CYAN}Type{fc.RESET}: {fc.WHITE}{server_project}{fc.RESET}\n" \
                         f"{fc.CYAN}Status{fc.RESET}: {fc.WHITE}removed{fc.RESET}\n" \
                         f"{fc.CYAN}Removed at{fc.RESET}: {fc.WHITE}{removal_time_str}{fc.RESET}\n" \
                         f"{fc.CYAN}To create it again use command{fc.RESET}: {fc.WHITE}\nsinara server create --fromConfig {sinara_removed_server[server]}{fc.RESET}")
