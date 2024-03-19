@@ -7,6 +7,7 @@ import os
 import json
 from pathlib import Path
 import shutil
+import logging
 
 class fc:
     HEADER = '\033[95m'
@@ -133,3 +134,11 @@ def delete_folder_contents(dest_folder):
             path.unlink()
         elif path.is_dir():
             shutil.rmtree(path)
+
+def get_cli_version():
+    try:
+        from ._version import __version__
+        return __version__
+    except Exception as e:
+        logging.info(e)
+    return 'unknown'

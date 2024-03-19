@@ -27,6 +27,7 @@ from .common_utils import get_public_ip, \
                           get_expanded_path, \
                           get_system_cpu_count, \
                           get_system_memory_size, \
+                          get_cli_version, \
                           delete_folder_contents, \
                           fc
 from .platform import SinaraPlatform
@@ -293,7 +294,8 @@ class SinaraServer():
                 "sinaraml.platform": str(args.platform),
                 "sinaraml.infra": str(args.infraName),
                 "sinaraml.config.path": str(cm.server_config),
-                "sinaraml.project": str(args.project)
+                "sinaraml.project": str(args.project),
+                "sinaraml.cli.version": str(get_cli_version())
             },
             "device_requests": gpu_requests # '--gpus all' flag equivalent in python docker client
         }

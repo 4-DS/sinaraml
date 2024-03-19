@@ -6,6 +6,7 @@ import platform
 import sys
 from .server import SinaraServer
 from .model import SinaraModel
+from .common_utils import get_cli_version
 
 from .plugin_loader import SinaraPluginLoader
 from docker import errors
@@ -28,14 +29,6 @@ def setup_logging(use_vebose=False):
     logging.basicConfig(format="%(levelname)s: %(message)s")
     if use_vebose:
         logging.getLogger().setLevel(logging.DEBUG)
-
-def get_cli_version():
-    try:
-        from ._version import __version__
-        return __version__
-    except Exception as e:
-        logging.info(e)
-    return 'unknown'
 
 def platform_is_supported():
     platform_name = platform.system().lower()
