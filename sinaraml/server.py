@@ -79,7 +79,7 @@ class SinaraServer():
         SinaraServer.create_parser.add_argument('--platform', default=SinaraPlatform.Desktop, choices=list(SinaraPlatform), type=SinaraPlatform, help='Server platform - host where the server is run')
         SinaraServer.create_parser.add_argument('--experimental', action='store_true', help='Use expermiental server images')
         SinaraServer.create_parser.add_argument('--image', type=str, help='Custom server image name')
-        SinaraServer.create_parser.add_argument('--shm_size', type=str, default="512m", help='Docker shared memory size option (default: %(default)s)')
+        SinaraServer.create_parser.add_argument('--shm_size', type=str, default=str(SinaraServer.get_default_shm_size()), help='Docker shared memory size option (default: %(default)s)')
         SinaraServer.create_parser.add_argument('--fromConfig', type=str, help='Create a server using server.json config')
         SinaraServer.create_parser.add_argument('--project', type=str, choices=SinaraServer.project_types, help='Project type for server (default: %(default)s)')
         SinaraServer.create_parser.set_defaults(func=SinaraServer.create)
@@ -197,7 +197,12 @@ class SinaraServer():
             result = int(total_mem_bytes * 0.7)
         else:
             result = int(total_mem_bytes - bytes_reserve_for_host)
-        return result      
+        return result
+    
+    @staticmethod
+    def get_default_shm_size():
+        total_mem_bytes = get_system_memory_size()
+        return int(total_mem_bytes / 6)
 
     @staticmethod
     def create(args):
