@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 import shutil
 import logging
+from multiprocessing import cpu_count
 
 class fc:
     HEADER = '\033[95m'
@@ -123,7 +124,7 @@ def str_to_bool(value):
         raise ValueError("invalid truth value %r" % (value,))
     
 def get_system_cpu_count():
-    return len(os.sched_getaffinity(0))
+    return cpu_count()
 
 def get_system_memory_size():
     return os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES')
