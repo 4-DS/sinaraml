@@ -13,23 +13,14 @@ from org_loader import SinaraOrgLoader
 from docker import errors
 
 def init_cli(root_parser, subject_parser):
-    org = SinaraOrgLoader.load_organization('/home/ilyap/ml_ops_organization/parts/command_handler.py')
+    
+    org = SinaraOrgLoader.load_organization('../../ml_ops_organization')
+    org2 = SinaraOrgLoader.load_organization('../../test_organization')
 
     #root_parser
     org.add_command_handlers(root_parser, subject_parser)
+    org2.add_command_handlers(root_parser, subject_parser)
 
-    # overloaded_modules = []
-    # for infra_plugin in SinaraPluginLoader.get_infra_plugins():
-    #     module = SinaraPluginLoader.get_infra_plugin(infra_plugin)
-    #     for plugin_class in module.get_plugin_classes():
-    #         for base in plugin_class.__bases__:
-    #             overloaded_modules.append(base.__name__)
-    #         plugin_class.add_command_handlers(subject_parser)
-
-    # if not 'SinaraServer' in overloaded_modules:
-    #     SinaraServer.add_command_handlers(root_parser, subject_parser)
-    # if not 'SinaraModel' in overloaded_modules:
-    #     SinaraModel.add_command_handlers(subject_parser)
 
 def setup_logging(use_vebose=False):
     logging.basicConfig(format="%(levelname)s: %(message)s")

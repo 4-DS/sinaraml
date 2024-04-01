@@ -7,18 +7,15 @@ class SinaraOrgLoader():
 
     @staticmethod
     def load_organization(filepath):
-        mod_name = "command_handler"
-        sys.path.append(os.path.dirname(filepath))
-
-        spec = importlib.util.spec_from_file_location(mod_name, filepath)
-        py_mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(py_mod)
-        print(dir(py_mod))
-        #py_mod.SinaraServer()
-        # if hasattr(py_mod, expected_class):
-        #     class_inst = getattr(py_mod, expected_class)()
-        #return class_inst
-
+        filepath = os.path.abspath(filepath)
+        mod_name = os.path.basename(filepath)
+        mod_dir = os.path.dirname(filepath)
+    
+        if not mod_dir in sys.path:
+            sys.path.append(mod_dir)
+            
+        py_mod = importlib.import_module(mod_name)
+        
         return py_mod.CommandHandler()
 
     @staticmethod
