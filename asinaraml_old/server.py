@@ -30,9 +30,9 @@ from .common_utils import get_public_ip, \
                           get_cli_version, \
                           delete_folder_contents, \
                           fc
-from .platform import SinaraPlatform
+from .sinara_platform import SinaraPlatform
 from .infra import SinaraInfra
-from .plugin_loader import SinaraPluginLoader
+from .org_loader import SinaraPluginLoader
 from .config_manager import SinaraServerConfigManager, SinaraGlobalConfigManager
 
 class SinaraServer():

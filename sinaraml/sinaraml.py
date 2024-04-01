@@ -4,26 +4,32 @@ import argparse
 import logging
 import platform
 import sys
-from .server import SinaraServer
-from .model import SinaraModel
-from .common_utils import get_cli_version
+#from .server import SinaraServer
+#from .model import SinaraModel
+#from .common_utils import get_cli_version
+from org_loader import SinaraOrgLoader
 
-from .plugin_loader import SinaraPluginLoader
+#from .plugin_loader import SinaraPluginLoader
 from docker import errors
 
 def init_cli(root_parser, subject_parser):
-    overloaded_modules = []
-    for infra_plugin in SinaraPluginLoader.get_infra_plugins():
-        module = SinaraPluginLoader.get_infra_plugin(infra_plugin)
-        for plugin_class in module.get_plugin_classes():
-            for base in plugin_class.__bases__:
-                overloaded_modules.append(base.__name__)
-            plugin_class.add_command_handlers(subject_parser)
+    org = SinaraOrgLoader.load_organization('/home/ilyap/ml_ops_organization/parts/command_handler.py')
 
-    if not 'SinaraServer' in overloaded_modules:
-        SinaraServer.add_command_handlers(root_parser, subject_parser)
-    if not 'SinaraModel' in overloaded_modules:
-        SinaraModel.add_command_handlers(subject_parser)
+    #root_parser
+    org.add_command_handlers(root_parser, subject_parser)
+
+    # overloaded_modules = []
+    # for infra_plugin in SinaraPluginLoader.get_infra_plugins():
+    #     module = SinaraPluginLoader.get_infra_plugin(infra_plugin)
+    #     for plugin_class in module.get_plugin_classes():
+    #         for base in plugin_class.__bases__:
+    #             overloaded_modules.append(base.__name__)
+    #         plugin_class.add_command_handlers(subject_parser)
+
+    # if not 'SinaraServer' in overloaded_modules:
+    #     SinaraServer.add_command_handlers(root_parser, subject_parser)
+    # if not 'SinaraModel' in overloaded_modules:
+    #     SinaraModel.add_command_handlers(subject_parser)
 
 def setup_logging(use_vebose=False):
     logging.basicConfig(format="%(levelname)s: %(message)s")
@@ -46,7 +52,7 @@ def main():
     parser = argparse.ArgumentParser()
     subject_subparser = parser.add_subparsers(title='subject', dest='subject', help=f"subject to use")
     parser.add_argument('-v', '--verbose', action='store_true', help="display verbose logs")
-    parser.add_argument('--version', action='version', version=f"SinaraML CLI {get_cli_version()}")
+    #parser.add_argument('--version', action='version', version=f"SinaraML CLI {get_cli_version()}")
 
     # each cli plugin adds and manages subcommand handlers (starting from subject handler) to root parser
     init_cli(parser, subject_subparser)
