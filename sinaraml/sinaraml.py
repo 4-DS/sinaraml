@@ -4,18 +4,19 @@ import argparse
 import logging
 import platform
 import sys
-#from .server import SinaraServer
-#from .model import SinaraModel
-#from .common_utils import get_cli_version
 from org_loader import SinaraOrgLoader
+from cli_manager import SinaraCliManager
 
 #from .plugin_loader import SinaraPluginLoader
 from docker import errors
 
-def init_cli(root_parser, subject_parser):
+def init_cli(root_parser, subject_parser, platform=None):
+    org_name = 'public'
+    if platform and '_' in platform:
+         org_name = platform.split('_')[0]
     org = SinaraOrgLoader.load_organization('/home/ilyap/ml_ops_organization/parts/command_handler.py')
 
-    #root_parser
+    SinaraCliManager.add_command_handlers(root_parser, subject_parser)
     org.add_command_handlers(root_parser, subject_parser)
 
     # overloaded_modules = []
@@ -52,10 +53,17 @@ def main():
     parser = argparse.ArgumentParser()
     subject_subparser = parser.add_subparsers(title='subject', dest='subject', help=f"subject to use")
     parser.add_argument('-v', '--verbose', action='store_true', help="display verbose logs")
+    parser.add_argument('-p', '--platform', help="choose SinaraML platform")
     #parser.add_argument('--version', action='version', version=f"SinaraML CLI {get_cli_version()}")
 
+    sinara_platform = None
+    for i in range(1, len(sys.argv)):
+        a = sys.argv[i]
+        if a.startswith('--platform'):
+            sinara_platform = a.split('=')[1] if "=" in a else sys.argv[i+1]
+            break
     # each cli plugin adds and manages subcommand handlers (starting from subject handler) to root parser
-    init_cli(parser, subject_subparser)
+    init_cli(parser, subject_subparser, platform=sinara_platform)
 
     # parse the command line and get all arguments
     args = parser.parse_known_args()[0]

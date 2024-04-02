@@ -2,18 +2,21 @@ import importlib.util
 import logging
 import os
 import sys
+from cli_manager import SinaraCliManager
 
 class SinaraOrgLoader():
 
     @staticmethod
-    def load_organization(filepath):
+    def load_organization(org_name='public'):
         mod_name = "command_handler"
+
+        filepath = SinaraCliManager.get_orgs_dir(org_name)
         sys.path.append(os.path.dirname(filepath))
 
         spec = importlib.util.spec_from_file_location(mod_name, filepath)
         py_mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(py_mod)
-        print(dir(py_mod))
+        #print(dir(py_mod))
         #py_mod.SinaraServer()
         # if hasattr(py_mod, expected_class):
         #     class_inst = getattr(py_mod, expected_class)()
