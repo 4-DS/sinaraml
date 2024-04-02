@@ -11,16 +11,16 @@ from docker import errors
 
 def init_cli(root_parser, subject_parser, platform=None):
 
+    SinaraCliManager.add_command_handlers(root_parser, subject_parser)
+
     org_name = 'public'
     if platform and '_' in platform:
          org_name = platform.split('_')[0]
     org = SinaraOrgLoader.load_organization(org_name)
+    if org:
+        org.add_command_handlers(root_parser, subject_parser)
     
-    # org = SinaraOrgLoader.load_organization('../../ml_ops_organization')
     # org2 = SinaraOrgLoader.load_organization('../../test_organization')
-
-    SinaraCliManager.add_command_handlers(root_parser, subject_parser)
-    org.add_command_handlers(root_parser, subject_parser)
     # org2.add_command_handlers(root_parser, subject_parser)
 
 

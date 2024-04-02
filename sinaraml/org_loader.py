@@ -9,6 +9,8 @@ class SinaraOrgLoader():
     @staticmethod
     def load_organization(org_name = 'public'):
         filepath = SinaraCliManager.get_orgs_dir(org_name)
+        if not os.path.isdir(filepath):
+            return
         filepath = os.path.abspath(filepath)
         mod_name = os.path.basename(filepath)
         mod_dir = os.path.dirname(filepath)
