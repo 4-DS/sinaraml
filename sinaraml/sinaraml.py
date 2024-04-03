@@ -4,18 +4,27 @@ import argparse
 import logging
 import platform
 import sys
-from org_loader import SinaraOrgLoader
-from cli_manager import SinaraCliManager
+from dataclasses import dataclass
+from .org_loader import SinaraOrgLoader
+from .cli_manager import SinaraCliManager
 
-from docker import errors
 
+@dataclass
+class Gitref:
+    gitref: str
+
+def check_any_cli_exists():
+    if not SinaraCliManager.check_last_update():
+        args = Gitref(gitref = "https://github.com/4-DS/mlops_organization.git")
+        SinaraCliManager.install_from_git(args)
+    
 def init_cli(root_parser, subject_parser, platform=None):
 
     SinaraCliManager.add_command_handlers(root_parser, subject_parser)
 
     org_name = 'public'
     if platform and '_' in platform:
-         org_name = platform.split('_')[0]
+        org_name = platform.split('_')[0]
     org = SinaraOrgLoader.load_organization(org_name)
     if org:
         org.add_command_handlers(root_parser, subject_parser)
@@ -54,6 +63,9 @@ def main():
         if a.startswith('--platform'):
             sinara_platform = a.split('=')[1] if "=" in a else sys.argv[i+1]
             break
+    
+    if not sinara_platform:
+        check_any_cli_exists()
     # each cli plugin adds and manages subcommand handlers (starting from subject handler) to root parser
     init_cli(parser, subject_subparser, platform=sinara_platform)
 
@@ -86,19 +98,19 @@ def main():
             if isinstance(e.__cause__, ConnectionError):
                 logging.error("Docker daemon is not available, make sure docker is running and you have permissions to access it. Run CLI with sinara --verbose flag to see details")
 
-            elif isinstance(e, errors.APIError):
-                if e.is_client_error():
-                    if e.status_code == 404:
-                        logging.error(f"Docker image or container not found. Run CLI with sinara --verbose flag to see details")
-                    elif e.status_code == 401 or e.status_code == 403:
-                        logging.error(f"Make sure you have permissions to access requested resource. Run CLI with sinara --verbose flag to see details")                        
-                    else:
-                        logging.error("Docker client has failed, Run CLI with sinara --verbose flag to see details")
-                else:
-                    logging.error("Docker daemon failed, Run CLI with sinara --verbose flag to see details")
+            # elif isinstance(e, errors.APIError):
+            #     if e.is_client_error():
+            #         if e.status_code == 404:
+            #             logging.error(f"Docker image or container not found. Run CLI with sinara --verbose flag to see details")
+            #         elif e.status_code == 401 or e.status_code == 403:
+            #             logging.error(f"Make sure you have permissions to access requested resource. Run CLI with sinara --verbose flag to see details")                        
+            #         else:
+            #             logging.error("Docker client has failed, Run CLI with sinara --verbose flag to see details")
+            #     else:
+            #         logging.error("Docker daemon failed, Run CLI with sinara --verbose flag to see details")
 
-            elif isinstance(e, errors.DockerException):
-                logging.error("Docker client has failed, Run CLI with sinara --verbose flag to see details")
+            # elif isinstance(e, errors.DockerException):
+            #     logging.error("Docker client has failed, Run CLI with sinara --verbose flag to see details")
 
             logging.error(e, exc_info=args.verbose)
                 

@@ -2,7 +2,7 @@ import importlib.util
 import logging
 import os
 import sys
-from cli_manager import SinaraCliManager
+from .cli_manager import SinaraCliManager
 
 class SinaraOrgLoader():
 

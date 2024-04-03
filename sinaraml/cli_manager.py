@@ -19,19 +19,24 @@ class SinaraCliManager:
 
         SinaraCliManager.add_install_handler(install_subparsers)
         SinaraCliManager.add_update_handler(install_subparsers)
-
+        SinaraCliManager.add_list_handler(install_subparsers)
 
     @staticmethod
     def add_install_handler(root_parser):
-        install_parser = root_parser.add_parser('install', help='containerize sinara bento service into a docker image')
+        install_parser = root_parser.add_parser('install', help='install organization cli')
         install_parser.add_argument('--gitref', help="git registry url of organization's cli")
         install_parser.set_defaults(func=SinaraCliManager.install_from_git)
     
     @staticmethod
     def add_update_handler(root_parser):
-        update_parser = root_parser.add_parser('update', help='containerize sinara bento service into a docker image')
+        update_parser = root_parser.add_parser('update', help='update organization cli')
         update_parser.add_argument('--name', help="name of organization's cli")
         update_parser.set_defaults(func=SinaraCliManager.update_org)
+
+    @staticmethod
+    def add_list_handler(root_parser):
+        list_parser = root_parser.add_parser('list', help='list all installed organization cli and platforms')
+        list_parser.set_defaults(func=SinaraCliManager.list_platforms)
 
     @staticmethod
     def get_orgs_dir(org_name = None):
@@ -109,3 +114,14 @@ class SinaraCliManager:
                 subprocess.run(command, timeout=60)
             except subprocess.TimeoutExpired:
                 print('git pull process ran too long')
+
+    @staticmethod
+    def list_platforms(args):
+        org_dir = SinaraCliManager.get_orgs_dir()
+
+        for dir in glob.glob(str(Path(org_dir, '*'))):
+            with open(f'{dir}/mlops_organization.json') as f:
+                org = json.load(f)
+                for body in org["cli_bodies"]:
+                    platforms = "|".join(body["platform_names"])
+                    print(f'{org["name"]}_{body["boundary_name"]}_[{platforms}]')
