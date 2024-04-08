@@ -7,19 +7,25 @@ from pathlib import Path
 
 
 class SinaraCliManager:
-    subject = "cli"
+    SUBJECT = "org"
     DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
     UPDATE_PERIOD = 24
 
     @staticmethod
     def add_command_handlers(root_parser, subject_parser):
         SinaraCliManager.subject_parser = subject_parser
-        install_parser = subject_parser.add_parser(SinaraCliManager.subject, help='sinara install subject')
-        install_subparsers = install_parser.add_subparsers(title='action', dest='action', help='Action to do with subject')
+        org_parser = subject_parser.add_parser(SinaraCliManager.SUBJECT, help='sinara org <arguments> or -h for help on command')
+        org_subparsers = org_parser.add_subparsers(title='action', dest='action', help='Action to do with subject')
+        root_parser.subjects.append(SinaraCliManager.SUBJECT)
 
-        SinaraCliManager.add_install_handler(install_subparsers)
-        SinaraCliManager.add_update_handler(install_subparsers)
-        SinaraCliManager.add_list_handler(install_subparsers)
+        # test two subjects with same name
+        # if SinaraCliManager.SUBJECT not in root_parser.subjects:
+        #     org_parser = subject_parser.add_parser(SinaraCliManager.SUBJECT, help='sinara org <arguments> or -h for help on command')
+        #     org_subparsers = org_parser.add_subparsers(title='action', dest='action', help='Action to do with subject')
+
+        SinaraCliManager.add_install_handler(org_subparsers)
+        SinaraCliManager.add_update_handler(org_subparsers)
+        SinaraCliManager.add_list_handler(org_subparsers)
 
     @staticmethod
     def add_install_handler(root_parser):
@@ -41,7 +47,7 @@ class SinaraCliManager:
     @staticmethod
     def get_orgs_dir(org_name = None):
         home_dir = str(Path.home())
-        dir = Path(f'{home_dir}', '.sinara', 'orgs')
+        dir = Path(f'{home_dir}', '.sinaraml', 'orgs')
         if org_name:
             dir = Path(dir, org_name)
         return dir
@@ -50,7 +56,7 @@ class SinaraCliManager:
     def check_last_update():
         result = {}
         home_dir = str(Path.home())
-        dir = Path(f'{home_dir}', '.sinara', 'orgs', '*')
+        dir = Path(f'{home_dir}', '.sinaraml', 'orgs', '*')
         for org_dir in glob.glob(str(dir)):
              #print(org_dir)
              with open(Path(org_dir, 'org_meta.json'), 'r') as f:

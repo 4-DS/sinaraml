@@ -20,9 +20,11 @@ def check_any_cli_exists():
     
 def init_cli(root_parser, subject_parser, platform=None):
 
+    root_parser.subjects = []
+
     SinaraCliManager.add_command_handlers(root_parser, subject_parser)
 
-    org_name = 'public'
+    org_name = 'personal'
     if platform and '_' in platform:
         org_name = platform.split('_')[0]
     org = SinaraOrgLoader.load_organization(org_name)
@@ -51,7 +53,7 @@ def main():
         return exit_code
 
     # add root parser and root subcommand parser (subject)
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(add_help=True)
     subject_subparser = parser.add_subparsers(title='subject', dest='subject', help=f"subject to use")
     parser.add_argument('-v', '--verbose', action='store_true', help="display verbose logs")
     parser.add_argument('-p', '--platform', help="choose SinaraML platform")
@@ -74,7 +76,7 @@ def main():
 
     # Setup logs format and verbosity level
     setup_logging(args.verbose)
-    
+
     # display help if required arguments are missing
     if not args.subject:
         parser.print_help()

@@ -7,7 +7,7 @@ from .cli_manager import SinaraCliManager
 class SinaraOrgLoader():
 
     @staticmethod
-    def load_organization(org_name = 'public'):
+    def load_organization(org_name = 'personal'):
         filepath = SinaraCliManager.get_orgs_dir(org_name)
         if not os.path.isdir(filepath):
             return
