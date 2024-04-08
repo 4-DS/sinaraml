@@ -26,8 +26,8 @@ Reload shell or reboot your machine after installation to enable CLI commands
 
 # Quick Start
 Commands start with the keyword sinara (similar to git, docker, kubectl)<br>
-If a command call is made without a mandatory parameter, help is displayed on the available parameters and methods of calling the command, for example:
-
+If a command call is made without a mandatory parameter, help is displayed on the available parameters and methods of calling the command, for example
+SinaraML server for personal use on desktop
 ```
 sinara server create
 ```
@@ -35,9 +35,9 @@ sinara server create
 sinara server start
 ```
 
-Or, for a remote VM platform:
+Or SinaraML server on remote machine (via ssh):
 ```
-sinara server create --platform remote_vm
+sinara server create --platform remote
 ```
 ```
 sinara server start
