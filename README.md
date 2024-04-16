@@ -1,3 +1,5 @@
+![SinaraML_logo](https://github.com/4-DS/.github/assets/55787399/edbd76dd-e296-4bde-9cca-c1d902c5504c)
+
 ## SinaraML Framework is a framework for creating and operating MLOps platforms
 From the first sight of a Data Scientist with Sinara to receiving the first Docker image with a model accessible via REST, it will take 15 minutes only.
 
