@@ -28,3 +28,33 @@ SinaraML is lightweight in all its aspects. The SinaraML framework not only addr
 To start you off, go to [**Getting started page**](https://github.com/4-DS/sinara-tutorials/wiki/Getting-started) to try **SinaraML Tutorials**
 
 [**SinaraML Book**](https://sinara-definitive-guide.readthedocs.io/en/latest/) allows you to dive deeply into the development of ML products.
+
+# Installation
+To install SinaraML CLI into your environment, run:
+```
+pip install sinaraml
+```
+Reload shell or reboot your machine after installation to enable CLI commands
+
+# Quick Start
+Commands start with the keyword sinara (similar to git, docker, kubectl)<br>
+If a command call is made without a mandatory parameter, help is displayed on the available parameters and methods of calling the command, for example
+SinaraML server for personal use on desktop
+```
+sinara server create
+```
+```
+sinara server start
+```
+
+Or SinaraML server on remote machine (via ssh):
+```
+sinara server create --platform remote
+```
+```
+sinara server start
+```
+To remove a server, run:
+```
+sinara server remove
+```
