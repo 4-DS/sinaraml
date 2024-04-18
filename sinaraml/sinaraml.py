@@ -30,8 +30,12 @@ def init_cli(root_parser, subject_parser, platform=None):
     if org:
         org.add_command_handlers(root_parser, subject_parser)
     
-    # org2 = SinaraOrgManager.load_organization('../../test_organization')
-    # org2.add_command_handlers(root_parser, subject_parser)
+def update_orgs():
+    for org in SinaraOrgManager.get_orgs():
+        from collections import namedtuple
+        Args = namedtuple('Args', ['name', 'internal'])
+        args = Args(name=org["name"], internal=True)
+        SinaraOrgManager.update_org(args)
 
 
 def setup_logging(use_vebose=False):
@@ -67,8 +71,10 @@ def main():
     
     if not sinara_platform:
         check_any_cli_exists()
+    update_orgs()
     # each cli plugin adds and manages subcommand handlers (starting from subject handler) to root parser
     init_cli(parser, subject_subparser, platform=sinara_platform)
+    
 
     # parse the command line and get all arguments
     args = parser.parse_known_args()[0]

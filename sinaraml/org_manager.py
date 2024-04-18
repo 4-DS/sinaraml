@@ -70,6 +70,15 @@ class SinaraOrgManager:
         if org_name:
             dir = Path(dir, org_name)
         return dir
+
+    @staticmethod
+    def get_orgs():
+        result = []
+        for org_path in SinaraOrgManager.get_orgs_dir().glob('*'):
+            with open(Path(org_path, 'mlops_organization.json')) as f:
+                org = json.load(f)
+                result.append(org)
+        return result
     
     @staticmethod
     def check_last_update():
@@ -136,20 +145,29 @@ class SinaraOrgManager:
         org_dir = SinaraOrgManager.get_orgs_dir(org_name)
         last_update  = SinaraOrgManager.check_last_update()
 
-        print(org_name)
-        print(org_dir)
-        print(last_update)
+        #print(org_name)
+        #print(org_dir)
+        #print(last_update)
         last_update_datetime = datetime.datetime.strptime(last_update[org_name], SinaraOrgManager.DATETIME_FORMAT).replace(tzinfo=None)
         now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
         duration = now - last_update_datetime
         hours = divmod(duration.total_seconds(), 3600)[0]
-        if hours > SinaraOrgManager.UPDATE_PERIOD:
+        if hours > SinaraOrgManager.UPDATE_PERIOD and hasattr(args, 'internal') and args.internal == True\
+            or not hasattr(args, 'internal'):
             command = f'git -C {str(org_dir)} pull'
             try:
                 subprocess.run(command, shell=True, timeout=60)
                 SinaraOrgManager._install_org_requirements(org_dir)
+
+                org_meta_path = Path(org_dir, 'org_meta.json')
+                with open(org_meta_path, 'r') as f:
+                    org_meta = json.load(f)
+                    org_meta["last_update"] = datetime.datetime.now(datetime.timezone.utc).strftime(SinaraOrgManager.DATETIME_FORMAT)
+                with open(Path(org_dir, 'org_meta.json'), 'w') as f:
+                   json.dump(org_meta, f)
+
             except subprocess.TimeoutExpired:
-                print('git pull process ran too long')
+                print('org update process ran too long')
                 return
     
     @staticmethod
