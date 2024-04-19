@@ -142,6 +142,15 @@ class SinaraOrgManager:
     @staticmethod
     def update_org(args):
         org_name = args.name
+        if not org_name:
+            # update all organizations
+            for org in SinaraOrgManager.get_orgs():
+                from collections import namedtuple
+                Args = namedtuple('Args', ['name'])
+                args = Args(name=org["name"])
+                SinaraOrgManager.update_org(args)
+            return
+            
         org_dir = SinaraOrgManager.get_orgs_dir(org_name)
         last_update  = SinaraOrgManager.check_last_update()
 
@@ -156,6 +165,7 @@ class SinaraOrgManager:
             or not hasattr(args, 'internal'):
             command = f'git -C {str(org_dir)} pull'
             try:
+                print(f"Updating organization '{org_name}'")
                 subprocess.run(command, shell=True, timeout=60)
                 SinaraOrgManager._install_org_requirements(org_dir)
 
@@ -183,6 +193,8 @@ class SinaraOrgManager:
         for dir in glob.glob(str(Path(org_dir, '*'))):
             with open(f'{dir}/mlops_organization.json') as f:
                 org = json.load(f)
-                for body in org["cli_bodies"]:
-                    platforms = "|".join(body["platform_names"])
-                    print(f'{org["name"]}_{body["boundary_name"]}_[{platforms}]')
+                print(f'Organization: {org["name"]}')
+                if "cli_bodies" in org.keys():
+                    for body in org["cli_bodies"]:
+                        platforms = "|".join(body["platform_names"])
+                        print(f'{org["name"]}_{body["boundary_name"]}_[{platforms}]')
