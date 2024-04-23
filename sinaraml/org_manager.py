@@ -111,18 +111,17 @@ class SinaraOrgManager:
         if install_dir.exists() and install_dir.is_dir():
             shutil.rmtree(install_dir)
         
-        print(install_dir)
-        command = ['git', 'clone', gitref, str(install_dir)]
+        command = f'git clone {gitref} {str(install_dir)}'
         print(command)
         try:
-            subprocess.run(command, timeout=60)
+            subprocess.run(command, timeout=60, shell=True)
         except subprocess.TimeoutExpired:
             print('git clone process ran too long')
             return
         
         with open(f'{install_dir}/mlops_organization.json') as f:
             org = json.load(f)
-        print(org)
+        #print(org)
         new_org_dir = Path(install_dir.parent.absolute(), org["name"])
         #remove destination directory
         if new_org_dir.exists() and new_org_dir.is_dir():
