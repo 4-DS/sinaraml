@@ -56,7 +56,7 @@ def main():
         return exit_code
 
     # add root parser and root subcommand parser (subject)
-    parser = argparse.ArgumentParser(add_help=True)
+    parser = argparse.ArgumentParser(add_help=True, allow_abbrev=True)
     subject_subparser = parser.add_subparsers(title='subject', dest='subject', help=f"subject to use")
     parser.add_argument('-v', '--verbose', action='store_true', help="display verbose logs")
     parser.add_argument('-p', '--platform', help="choose SinaraML platform")
@@ -77,7 +77,7 @@ def main():
     
 
     # parse the command line and get all arguments
-    args = parser.parse_known_args()[0]
+    args = parser.parse_args()
 
     # Setup logs format and verbosity level
     setup_logging(args.verbose)
