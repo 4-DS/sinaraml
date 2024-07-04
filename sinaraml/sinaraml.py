@@ -26,6 +26,8 @@ def init_cli(root_parser, subject_parser, platform=None):
     org_name = 'personal'
     if platform and '_' in platform:
         org_name = platform.split('_')[0]
+    elif not platform is None:
+        org_name = platform
     org = SinaraOrgManager.load_organization(org_name)
     if org:
         org.add_command_handlers(root_parser, subject_parser)
@@ -59,7 +61,7 @@ def main():
     parser = argparse.ArgumentParser(add_help=True, allow_abbrev=True)
     subject_subparser = parser.add_subparsers(title='subject', dest='subject', help=f"subject to use")
     parser.add_argument('-v', '--verbose', action='store_true', help="display verbose logs")
-    parser.add_argument('-p', '--platform', help="choose SinaraML platform")
+    parser.add_argument('-p', '--platform', action="store", help="choose SinaraML platform")
     #parser.add_argument('--version', action='version', version=f"SinaraML CLI {get_cli_version()}")
 
     sinara_platform = None
@@ -77,10 +79,12 @@ def main():
     
 
     # parse the command line and get all arguments
-    args = parser.parse_args()
+    args, unknown = parser.parse_known_args()
+    root_args = parser.parse_args(unknown)
 
     # Setup logs format and verbosity level
-    setup_logging(args.verbose)
+    verbose = args.verbose | root_args.verbose
+    setup_logging(verbose)
 
     # display help if required arguments are missing
     if not args.subject:
