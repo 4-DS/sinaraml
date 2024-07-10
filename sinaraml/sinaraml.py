@@ -85,6 +85,7 @@ def main():
     # Setup logs format and verbosity level
     verbose = args.verbose | root_args.verbose
     setup_logging(verbose)
+    args.platform = sinara_platform if not sinara_platform is None else 'personal'
 
     # display help if required arguments are missing
     if not args.subject:
