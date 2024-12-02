@@ -11,9 +11,9 @@ description = "SinaraML"
 readme = "README.md"
 requires-python = ">=3.6"
 keywords = ["cli", "sinaraml"]
+license = {file = "LICENSE"}
 classifiers = [
         "Operating System :: OS Independent",
-        "License :: Custom :: SinaraML License"
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
