@@ -28,6 +28,7 @@ def init_cli(root_parser, subject_parser, platform=None):
         org_name = platform.split('_')[0]
     elif not platform is None:
         org_name = platform
+    logging.info(f"Loading {org_name}...")
     org = SinaraOrgManager.load_organization(org_name)
     if org:
         org.add_command_handlers(root_parser, subject_parser)
@@ -71,21 +72,38 @@ def main():
             sinara_platform = a.split('=')[1] if "=" in a else sys.argv[i+1]
             break
     
-    if not sinara_platform:
-        check_any_cli_exists()
+    #if not sinara_platform:
+
+    check_any_cli_exists()
     update_orgs()
+
     # each cli plugin adds and manages subcommand handlers (starting from subject handler) to root parser
     init_cli(parser, subject_subparser, platform=sinara_platform)
-    
-
     # parse the command line and get all arguments
     args, unknown = parser.parse_known_args()
     root_args = parser.parse_args(unknown)
+
+    if args.subject == 'server' and "instanceName" in vars(args).keys() and "platform" not in vars(args).keys():
+        sinara_platform_subst = SinaraOrgManager.get_platform_by_instance_name(args.instanceName)
+        if sinara_platform_subst != sinara_platform:
+            # reinitialize parsers and arguments for new platform
+            sinara_platform = sinara_platform_subst
+            # parser = argparse.ArgumentParser(add_help=True, allow_abbrev=True)
+            # subject_subparser = parser.add_subparsers(title='subject', dest='subject', help=f"subject to use")
+            # parser.add_argument('-v', '--verbose', action='store_true', help="display verbose logs")
+            # parser.add_argument('-p', '--platform', action="store", help="choose SinaraML platform")
+            init_cli(parser, subject_subparser, platform=sinara_platform)
+            # parse the command line and get all arguments
+            args, unknown = parser.parse_known_args()
+            root_args = parser.parse_args(unknown)
+
 
     # Setup logs format and verbosity level
     verbose = args.verbose | root_args.verbose
     setup_logging(verbose)
     args.platform = sinara_platform if not sinara_platform is None else 'personal'
+
+    logging.info(f"args.platform: {args.platform}")
 
     # display help if required arguments are missing
     if not args.subject:

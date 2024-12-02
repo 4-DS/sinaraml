@@ -1,18 +1,46 @@
 import datetime
 import glob
 import json
+import logging
 import shutil
 import subprocess
 import importlib
 import os
 import sys
 from pathlib import Path
+import docker
 
+def get_docker_client():
+    
+    from time import sleep
+    retries = 3
+    
+    while retries:
+        try:
+            return docker.from_env()
+        except Exception as e:
+            logging.debug(e)
+        retries -= 1
+        logging.warning("Failed to connect to docker daemon, will try again after 30s...")
+        sleep(30)
+    raise Exception(f"Cannot connect to docker daemon.\nCheck if Docker is installed and running")
 
 class SinaraOrgManager:
     SUBJECT = "org"
     DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
     UPDATE_PERIOD = 24
+
+    @staticmethod
+    def get_platform_by_instance_name(instance_name):
+        platform_name = "personal"
+        client = get_docker_client()
+        sinara_containers = client.containers.list(all=True, ignore_removed=False, sparse=True, filters={"label": "sinaraml.platform"})
+        for sinara_container in sinara_containers:
+            container_name = sinara_container.attrs["Names"][0][1:]
+            if container_name == instance_name:
+                #print(sinara_container.attrs["Labels"])
+                platform_name = sinara_container.attrs["Labels"]["sinaraml.platform"]
+        return platform_name
 
     @staticmethod
     def load_organization(org_name = 'personal'):
