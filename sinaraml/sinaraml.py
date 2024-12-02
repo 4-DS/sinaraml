@@ -83,8 +83,9 @@ def main():
     args, unknown = parser.parse_known_args()
     root_args = parser.parse_args(unknown)
 
-    if args.subject == 'server' and "instanceName" in vars(args).keys() and "platform" not in vars(args).keys():
+    if args.subject == 'server' and "instanceName" in vars(args).keys():
         sinara_platform_subst = SinaraOrgManager.get_platform_by_instance_name(args.instanceName)
+        print(sinara_platform_subst)
         if sinara_platform_subst != sinara_platform:
             # reinitialize parsers and arguments for new platform
             sinara_platform = sinara_platform_subst
