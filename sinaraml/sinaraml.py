@@ -89,10 +89,10 @@ def main():
         if sinara_platform_subst != sinara_platform:
             # reinitialize parsers and arguments for new platform
             sinara_platform = sinara_platform_subst
-            # parser = argparse.ArgumentParser(add_help=True, allow_abbrev=True)
-            # subject_subparser = parser.add_subparsers(title='subject', dest='subject', help=f"subject to use")
-            # parser.add_argument('-v', '--verbose', action='store_true', help="display verbose logs")
-            # parser.add_argument('-p', '--platform', action="store", help="choose SinaraML platform")
+            parser = argparse.ArgumentParser(add_help=True, allow_abbrev=True)
+            subject_subparser = parser.add_subparsers(title='subject', dest='subject', help=f"subject to use")
+            parser.add_argument('-v', '--verbose', action='store_true', help="display verbose logs")
+            parser.add_argument('-p', '--platform', action="store", help="choose SinaraML platform")
             init_cli(parser, subject_subparser, platform=sinara_platform)
             # parse the command line and get all arguments
             args, unknown = parser.parse_known_args()
