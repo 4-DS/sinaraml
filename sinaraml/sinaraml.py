@@ -12,10 +12,14 @@ from .org_manager import SinaraOrgManager
 class Gitref:
     gitref: str
 
-def check_any_cli_exists():
-    if not SinaraOrgManager.check_last_update():
-        args = Gitref(gitref = "https://github.com/4-DS/mlops_organization.git")
-        SinaraOrgManager.install_from_git(args)
+def check_cli_exists(platform):
+    if platform is None and not SinaraOrgManager.check_last_update():
+        SinaraOrgManager.install_from_git(args = Gitref(gitref = "https://github.com/4-DS/mlops_organization.git"))
+    elif not platform is None:
+        org_name = platform.split("_")[0]
+        org_list = [o['name'] for o in SinaraOrgManager.get_orgs()]
+        if not org_name in org_list:
+            raise Exception(f"Organization '{org_name}' not found in list of installed orgs: {org_list}\nUse 'sinara org install' command to install new organization cli")
     
 def init_cli(root_parser, subject_parser, platform=None):
 
@@ -45,6 +49,8 @@ def setup_logging(use_vebose=False):
     logging.basicConfig(format="%(levelname)s: %(message)s")
     if use_vebose:
         logging.getLogger().setLevel(logging.DEBUG)
+    else:
+        logging.getLogger().setLevel(logging.INFO)
 
 def platform_is_supported():
     platform_name = platform.system().lower()
@@ -71,10 +77,9 @@ def main():
         if a.startswith('--platform'):
             sinara_platform = a.split('=')[1] if "=" in a else sys.argv[i+1]
             break
-    
-    #if not sinara_platform:
 
-    check_any_cli_exists()
+    check_cli_exists(sinara_platform)
+
     update_orgs()
 
     # each cli plugin adds and manages subcommand handlers (starting from subject handler) to root parser
